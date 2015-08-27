@@ -1,0 +1,5 @@
+FROM gliderlabs/alpine:2.7
+
+ADD ./dist/artifacts/kubernetes-agent /kubernetes-agent
+
+CMD ["/kubernetes-agent"]

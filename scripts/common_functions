@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+function set_project_vars() {
+    if [ -f .build_envs ]; then
+        . .build_envs
+    fi
+    export GOPATH=/gopath
+    export GO15VENDOREXPERIMENT=1
+    export PATH=$GOPATH/bin:$PATH
+    PACKAGE=/gopath/src/$(<.package)
+    PROJECT=$(basename $PACKAGE)
+}

@@ -59,7 +59,7 @@ func (s *ListenerTestSuite) SetUpSuite(c *check.C) {
 }
 
 func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
-	containers, err := s.createPod(c)
+	pod, containers, err := s.createPod(c)
 	if err != nil {
 		c.Fatal(err)
 	}
@@ -95,7 +95,8 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 	data := get(instance, "+data")
 	fields := get(data, "+fields")
 	newLabels := get(fields, "+labels")
-	c.Assert(newLabels, check.DeepEquals, map[string]string{"env": "dev"})
+	c.Assert(newLabels, check.DeepEquals,
+		map[string]string{"env": "dev", "io.rancher.service.deployment.unit": pod.Metadata.Uid, "io.rancher.stack.name": "default"})
 }
 
 func get(theMap interface{}, key string) interface{} {
@@ -106,7 +107,7 @@ func get(theMap interface{}, key string) interface{} {
 	}
 }
 
-func (s *ListenerTestSuite) createPod(c *check.C) ([]docker.APIContainers, error) {
+func (s *ListenerTestSuite) createPod(c *check.C) (*model.Pod, []docker.APIContainers, error) {
 	podName := "pod-test-1"
 	cleanup(s.kClient, "pod", "default", podName, c)
 
@@ -132,7 +133,7 @@ func (s *ListenerTestSuite) createPod(c *check.C) ([]docker.APIContainers, error
 		Spec:     podSpec,
 	}
 
-	_, err := s.kClient.Pod.CreatePod("default", pod)
+	pod, err := s.kClient.Pod.CreatePod("default", pod)
 	if err != nil {
 		c.Fatal(err)
 	}
@@ -145,15 +146,15 @@ func (s *ListenerTestSuite) createPod(c *check.C) ([]docker.APIContainers, error
 	for i := 0; i < 10; i++ {
 		containers, err := s.dClient.ListContainers(opts)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if len(containers) > 0 {
-			return containers, nil
+			return pod, containers, nil
 		}
 		<-time.After(time.Second * 5)
 	}
 	c.Fatal("Timed out waiting for containers to be created for pod.")
-	return nil, nil
+	return nil, nil, nil
 }
 
 type MockPublishOperations struct {

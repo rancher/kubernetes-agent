@@ -101,6 +101,9 @@ func (h *syncHandler) Handler(event *revents.Event, cli *client.RancherClient) e
 		}
 	}
 
+	labels["io.rancher.service.deployment.unit"] = pod.Metadata.Uid
+	labels["io.rancher.stack.name"] = pod.Metadata.Namespace
+
 	reply := newReply(event)
 	reply.ResourceType = "instanceHostMap"
 	reply.ResourceId = event.ResourceId

@@ -1,0 +1,29 @@
+#!/bin/bash 
+
+set -e
+
+cd $(dirname $0)/..
+
+. ./scripts/common_functions
+set_project_vars
+
+GITCOMMIT=`git rev-parse --short HEAD`
+
+if [ -L ${PACKAGE} ]; then
+    rm ${PACKAGE}
+fi
+
+if [ ! -e ${PACKAGE} ]; then
+    mkdir -p $(dirname $PACKAGE)
+    ln -s $(pwd) $PACKAGE
+fi
+
+cd $PACKAGE
+go version
+rm -rf build
+mkdir -p build
+
+git submodule init
+git submodule update
+CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o build/${PROJECT} .
+file build/kubernetes-agent

@@ -1,0 +1,45 @@
+#!/bin/bash 
+
+set -e
+
+cd $(dirname $0)/..
+
+. ./scripts/common_functions
+
+set_project_vars
+
+wrapdocker > /tmp/docker.log 2>&1
+docker ps -q
+
+# Start up kubernetes
+# docker load -i kubernetes-images.tar.gz #Uncomment for faster local wrap ci (if you have the tar)
+docker run --net=host -d gcr.io/google_containers/etcd:2.0.9 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
+docker run --net=host -d -v /var/run/docker.sock:/var/run/docker.sock  gcr.io/google_containers/hyperkube:v0.21.2 /hyperkube kubelet --api_servers=http://localhost:8080 --v=2 --address=0.0.0.0 --enable_server --hostname_override=127.0.0.1 --config=/etc/kubernetes/manifests
+docker run -d --net=host --privileged gcr.io/google_containers/hyperkube:v0.21.2 /hyperkube proxy --master=http://127.0.0.1:8080 --v=2
+docker ps -a
+
+echo "Waiting for kubernetes"
+until $(curl --output /dev/null --silent --fail http://localhost:8080/api/v1/services); do
+    printf '.'
+    sleep 5
+done
+
+cd /gopath/src/github.com/rancher/kubernetes-agent
+for pkg in $(go list ./...); do
+    if [[ $pkg != *"vendor"* ]]; then
+        go test -v $pkg
+    fi
+done
+
+result=$(find . -name "*.go" | grep -v /vendor | xargs gofmt -s -l)
+if [ -n "$result" ]; then
+    echo "${#result[@]} files failed gofmt check:"
+fi
+for i in $result; do
+    gofmt -s -d $i
+    echo $i
+done
+
+[ -n "$result" ] && exit 1
+
+echo OK

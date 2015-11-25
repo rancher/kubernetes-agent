@@ -51,7 +51,8 @@ func ConnectToEventStream(handlers []Handler, conf config.Config) error {
 					return err
 				}
 			} else {
-				go readMessages(ws, doneChan, handler)
+				go readMessages(ws, url, doneChan, handler)
+				break
 			}
 		}
 	}
@@ -60,7 +61,7 @@ func ConnectToEventStream(handlers []Handler, conf config.Config) error {
 	return err
 }
 
-func readMessages(ws *websocket.Conn, rc chan<- error, handler Handler) (e error) {
+func readMessages(ws *websocket.Conn, url string, rc chan<- error, handler Handler) (e error) {
 	defer func() {
 		rc <- e
 	}()
@@ -68,7 +69,7 @@ func readMessages(ws *websocket.Conn, rc chan<- error, handler Handler) (e error
 	for {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			return fmt.Errorf("Error reading from websocket: %s", err)
+			return fmt.Errorf("Error reading from websocket for [%v]: %s", url, err)
 		}
 
 		var event model.WatchEvent
@@ -82,7 +83,6 @@ func readMessages(ws *websocket.Conn, rc chan<- error, handler Handler) (e error
 		if err != nil {
 			log.Errorf("Error handling event: %#v", err)
 		}
-
 	}
 }
 

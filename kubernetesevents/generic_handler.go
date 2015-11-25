@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/rancher/go-rancher/client"
@@ -44,12 +45,20 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 		if h.kindHandled == RCKind {
 			var rc model.ReplicationController
 			mapstructure.Decode(i, &rc)
+			if rc == (model.ReplicationController{}) {
+				log.Infof("Couldn't decode %+v to rc.", i)
+				return nil
+			}
 			kind = rc.Kind
 			selector = rc.Spec.Selector
 			metadata = rc.Metadata
 		} else if h.kindHandled == ServiceKind {
 			var svc model.Service
 			mapstructure.Decode(i, &svc)
+			if svc == (model.Service{}) {
+				log.Infof("Couldn't decode %+v to service.", i)
+				return nil
+			}
 			kind = svc.Kind
 			selector = svc.Spec.Selector
 			metadata = svc.Metadata

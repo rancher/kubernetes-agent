@@ -45,7 +45,7 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 		if h.kindHandled == RCKind {
 			var rc model.ReplicationController
 			mapstructure.Decode(i, &rc)
-			if rc == (model.ReplicationController{}) {
+			if rc == (model.ReplicationController{}) || rc.Spec == nil {
 				log.Infof("Couldn't decode %+v to rc.", i)
 				return nil
 			}
@@ -55,7 +55,7 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 		} else if h.kindHandled == ServiceKind {
 			var svc model.Service
 			mapstructure.Decode(i, &svc)
-			if svc == (model.Service{}) {
+			if svc == (model.Service{}) || svc.Spec == nil {
 				log.Infof("Couldn't decode %+v to service.", i)
 				return nil
 			}
@@ -122,16 +122,22 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 	}
 	serviceEvent.Service = service
 
-	namespace, err := h.kClient.Namespace.ByName(metadata.Namespace)
-	if err != nil {
-		return err
-	}
 	env := make(map[string]string)
-	env["name"] = namespace.Metadata.Name
-	env["externalId"] = "kubernetes://" + namespace.Metadata.Uid
+
+	if metadata.Namespace == "kube-system" {
+		env["name"] = metadata.Namespace
+		env["externalId"] = "kubernetes://" + metadata.Namespace
+	} else {
+		namespace, err := h.kClient.Namespace.ByName(metadata.Namespace)
+		if err != nil {
+			return err
+		}
+		env["name"] = namespace.Metadata.Name
+		env["externalId"] = "kubernetes://" + namespace.Metadata.Uid
+	}
 	serviceEvent.Environment = env
 
-	return err
+	return nil
 }
 
 func constructEventType(event model.WatchEvent) string {

@@ -1,9 +1,10 @@
 package rancherevents
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
+	"github.com/mitchellh/mapstructure"
 	revents "github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-rancher/client"
 	"github.com/rancher/kubernetes-agent/config"
@@ -109,39 +110,43 @@ func (h *syncHandler) Handler(event *revents.Event, cli *client.RancherClient) e
 	return nil
 }
 
-func (h *syncHandler) getPod(event *revents.Event) (string, string) {
-	// TODO Rewrite this horror
-	data := event.Data
-	if ihm, ok := data["instanceHostMap"]; ok {
-		if ihmMap, ok := ihm.(map[string]interface{}); ok {
-			if i, ok := ihmMap["instance"]; ok {
-				if iMap, ok := i.(map[string]interface{}); ok {
-					if d, ok := iMap["data"]; ok {
-						if dMap, ok := d.(map[string]interface{}); ok {
-							if f, ok := dMap["fields"]; ok {
-								if fMap, ok := f.(map[string]interface{}); ok {
-									if labels, ok := fMap["labels"]; ok {
-										if lMap, ok := labels.(map[string]interface{}); ok {
-											if l, ok := lMap["io.kubernetes.pod.name"]; ok {
-												if label, ok := l.(string); ok {
-													parts := strings.SplitN(label, "/", 2)
-													if len(parts) == 2 {
-														return parts[0], parts[1]
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+func (h *syncHandler) getPod(event *revents.Event) (ns, name string) {
+	ihm := &struct {
+		IHM struct {
+			I struct {
+				D struct {
+					F struct {
+						Labels map[string]string `mapstructure:"labels"`
+					} `mapstructure:"fields"`
+				} `mapstructure:"data"`
+			} `mapstructure:"instance"`
+		} `mapstructure:"instanceHostMap"`
+	}{}
+
+	err := mapstructure.Decode(event.Data, &ihm)
+	if err != nil {
+		log.Error("Cannot parse event")
+		return
+	}
+
+	labels := ihm.IHM.I.D.F.Labels
+	if len(labels) == 0 {
+		return
+	}
+
+	var ok bool
+	if ns, ok = labels["io.kubernetes.pod.namespace"]; ok {
+		// version >= 1.2
+		name = labels["io.kubernetes.pod.name"]
+	} else if name, ok = labels["io.kubernetes.pod.name"]; ok {
+		// try to parse
+		parts := strings.SplitN(name, "/", 2)
+		if len(parts) == 0 {
+			ns, name = parts[0], parts[1]
 		}
 	}
 
-	return "", ""
+	return
 }
 
 type PingHandler struct {

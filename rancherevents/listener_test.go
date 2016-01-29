@@ -15,6 +15,7 @@ import (
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/dockerclient"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
+	"github.com/rancher/kubernetes-agent/rancherevents/eventhandlers"
 )
 
 var conf = config.Config{
@@ -85,9 +86,7 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 			},
 		},
 	}
-	sh := syncHandler{
-		kClient: s.kClient,
-	}
+	sh := eventhandlers.NewProvideLablesHandler(s.kClient)
 
 	err = sh.Handler(event, s.mockRClient)
 	if err != nil {

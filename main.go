@@ -70,9 +70,8 @@ func launch(c *cli.Context) {
 
 	kClient := kubernetesclient.NewClient(conf.KubernetesURL, true)
 
-	rcHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.RCKind)
 	svcHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.ServiceKind)
-	handlers := []kubernetesevents.Handler{rcHandler, svcHandler}
+	handlers := []kubernetesevents.Handler{svcHandler}
 
 	go func(rc chan error) {
 		err := kubernetesevents.ConnectToEventStream(handlers, conf)

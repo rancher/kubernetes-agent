@@ -1,10 +1,9 @@
 package kubernetesevents
 
 import (
+	"gopkg.in/check.v1"
 	"testing"
 	"time"
-
-	"gopkg.in/check.v1"
 
 	"github.com/rancher/go-rancher/client"
 	"github.com/rancher/kubernetes-model/model"
@@ -44,8 +43,7 @@ func (s *GenerichandlerTestSuite) SetUpSuite(c *check.C) {
 	}
 
 	svcHandler := NewHandler(mockRancherClient, s.kClient, ServiceKind)
-	rcHandler := NewHandler(mockRancherClient, s.kClient, RCKind)
-	handlers := []Handler{svcHandler, rcHandler}
+	handlers := []Handler{svcHandler}
 	go ConnectToEventStream(handlers, conf)
 	time.Sleep(time.Second)
 }
@@ -130,111 +128,6 @@ func (s *GenerichandlerTestSuite) TestService(c *check.C) {
 	}
 }
 
-func (s *GenerichandlerTestSuite) TestReplicationController(c *check.C) {
-	rcName := "test-rc-1"
-	cleanup(s.kClient, "rc", "default", rcName, c)
-
-	meta := &model.ObjectMeta{Name: rcName}
-	selector := map[string]interface{}{"env": "dev"}
-
-	podLabels := map[string]interface{}{"env": "dev"}
-	podMeta := &model.ObjectMeta{Labels: podLabels}
-	ports := make([]model.ContainerPort, 0)
-	port := model.ContainerPort{
-		Name:          "port-1",
-		ContainerPort: 8889,
-	}
-	ports = append(ports, port)
-	container := model.Container{
-		Name:            "rc-test",
-		Image:           "busybox",
-		ImagePullPolicy: "IfNotPresent",
-	}
-	containers := []model.Container{container}
-	podSpec := &model.PodSpec{
-		Containers:    containers,
-		RestartPolicy: "Always",
-		DnsPolicy:     "ClusterFirst",
-	}
-
-	podTemplate := &model.PodTemplateSpec{
-		Metadata: podMeta,
-		Spec:     podSpec,
-	}
-
-	spec := &model.ReplicationControllerSpec{
-		Selector: selector,
-		Replicas: 1,
-		Template: podTemplate,
-	}
-
-	rc := &model.ReplicationController{
-		Metadata: meta,
-		Spec:     spec,
-	}
-
-	respRc, err := s.kClient.ReplicationController.CreateReplicationController("default", rc)
-	if err != nil {
-		c.Fatal(err)
-	}
-
-	// this loop is because the RC changes in the background as the containers are started and we
-	// arent sure when it will come to a resting state. The version id has to be the latest for
-	// k8s to accept the request
-	tries := 0
-	for tries < 10 {
-		newRc, err := s.kClient.ReplicationController.ByName("default", rcName)
-		respRc.Spec.Replicas = 2
-		if err != nil {
-			c.Fatal(err)
-		}
-		_, err = s.kClient.ReplicationController.ReplaceReplicationController("default", newRc)
-		if err != nil {
-			<-time.After(time.Second)
-		} else {
-			break
-		}
-	}
-
-	_, err = s.kClient.ReplicationController.DeleteReplicationController("default", rcName)
-	if err != nil {
-		c.Fatal(err)
-	}
-
-	var gotCreate, gotMod, gotDelete bool
-	for !gotCreate || !gotMod || !gotDelete {
-		select {
-		case event := <-s.events:
-			c.Logf("EXPECTED %s; EVENT %s", respRc.Metadata.Uid, event)
-			svc := event.Service
-			service := svc.(client.Service)
-			if event.ExternalId == respRc.Metadata.Uid {
-				if event.EventType == "service.create" {
-					c.Assert(service.Kind, check.Equals, "kubernetesReplicationController")
-					c.Assert(service.Name, check.Equals, rcName)
-					c.Assert(service.ExternalId, check.Equals, respRc.Metadata.Uid)
-					c.Assert(service.SelectorContainer, check.Equals, "env=dev")
-
-					env := event.Environment.(map[string]string)
-					c.Assert(env["name"], check.Equals, "default")
-					kEnv, err := s.kClient.Namespace.ByName("default")
-					if err != nil {
-						c.Fatal(err)
-					}
-					c.Assert(env["externalId"], check.Equals, "kubernetes://"+kEnv.Metadata.Uid)
-					gotCreate = true
-				} else if event.EventType == "service.update" {
-					gotMod = true
-				} else if event.EventType == "service.remove" {
-					gotDelete = true
-				}
-			}
-		case <-time.After(time.Second * 5):
-			c.Fatalf("Timed out waiting for event.")
-		}
-	}
-}
-
 type MockServiceEventOperations struct {
 	client.ExternalServiceEventClient
 	events chan<- client.ExternalServiceEvent
@@ -250,8 +143,6 @@ func cleanup(client *kubernetesclient.Client, resourceType string, namespace str
 	switch resourceType {
 	case "service":
 		_, err = client.Service.DeleteService(namespace, name)
-	case "rc":
-		_, err = client.ReplicationController.DeleteReplicationController(namespace, name)
 	default:
 		c.Fatalf("Unknown type for cleanup: %s", resourceType)
 	}

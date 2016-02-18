@@ -13,7 +13,6 @@ import (
 	"github.com/rancher/kubernetes-model/model"
 )
 
-const RCKind string = "replicationcontrollers"
 const ServiceKind string = "services"
 const eventTypePrefix string = "service."
 
@@ -42,17 +41,8 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 		var metadata *model.ObjectMeta
 		var kind string
 		var selector map[string]interface{}
-		if h.kindHandled == RCKind {
-			var rc model.ReplicationController
-			mapstructure.Decode(i, &rc)
-			if rc == (model.ReplicationController{}) || rc.Spec == nil {
-				log.Infof("Couldn't decode %+v to rc.", i)
-				return nil
-			}
-			kind = rc.Kind
-			selector = rc.Spec.Selector
-			metadata = rc.Metadata
-		} else if h.kindHandled == ServiceKind {
+		var clusterIp string
+		if h.kindHandled == ServiceKind {
 			var svc model.Service
 			mapstructure.Decode(i, &svc)
 			if svc == (model.Service{}) || svc.Spec == nil {
@@ -62,6 +52,7 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 			kind = svc.Kind
 			selector = svc.Spec.Selector
 			metadata = svc.Metadata
+			clusterIp = svc.Spec.ClusterIP
 		} else {
 			return fmt.Errorf("Unrecognized handled kind [%s].", h.kindHandled)
 		}
@@ -76,7 +67,7 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 			fallthrough
 
 		case "ADDED":
-			err := h.add(selector, metadata, event, serviceEvent, constructResourceType(kind))
+			err := h.add(selector, metadata, clusterIp, event, serviceEvent, constructResourceType(kind))
 			if err != nil {
 				return err
 			}
@@ -97,7 +88,7 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 	return fmt.Errorf("Couldn't decode event [%#v]", event)
 }
 
-func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model.ObjectMeta, event model.WatchEvent, serviceEvent *client.ExternalServiceEvent, kind string) error {
+func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model.ObjectMeta, clusterIp string, event model.WatchEvent, serviceEvent *client.ExternalServiceEvent, kind string) error {
 	var buffer bytes.Buffer
 	for key, v := range selectorMap {
 		if val, ok := v.(string); ok {
@@ -113,12 +104,16 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 	fields := map[string]interface{}{"template": event.Object}
 	data := map[string]interface{}{"fields": fields}
 
+	rancherUuid, _ := metadata.Labels["io.rancher.uuid"].(string)
+
 	service := client.Service{
 		Kind:              kind,
 		Name:              metadata.Name,
 		ExternalId:        metadata.Uid,
 		SelectorContainer: selector,
 		Data:              data,
+		Uuid:              rancherUuid,
+		Vip:               clusterIp,
 	}
 	serviceEvent.Service = service
 
@@ -134,6 +129,8 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 		}
 		env["name"] = namespace.Metadata.Name
 		env["externalId"] = "kubernetes://" + namespace.Metadata.Uid
+		rancherUuid, _ := namespace.Metadata.Labels["io.rancher.uuid"].(string)
+		env["uuid"] = rancherUuid
 	}
 	serviceEvent.Environment = env
 

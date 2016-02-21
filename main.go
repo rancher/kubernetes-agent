@@ -53,6 +53,11 @@ func main() {
 			Usage:  "Port to configure an HTTP health check listener on",
 			EnvVar: "HEALTH_CHECK_PORT",
 		},
+		cli.StringSliceFlag{
+			Name:  "watch-kind",
+			Value: &cli.StringSlice{"namespaces", "services", "replicationcontrollers", "pods"},
+			Usage: "Which k8s kinds to watch and report changes to Rancher",
+		},
 	}
 
 	app.Run(os.Args)
@@ -72,6 +77,11 @@ func launch(c *cli.Context) {
 
 	svcHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.ServiceKind)
 	handlers := []kubernetesevents.Handler{svcHandler}
+
+	log.Info("Watching changes for kinds: ", c.StringSlice("watch-kind"))
+	for _, kind := range c.StringSlice("watch-kind") {
+		handlers = append(handlers, kubernetesevents.NewChangeHandler(rClient, kClient, kind))
+	}
 
 	go func(rc chan error) {
 		err := kubernetesevents.ConnectToEventStream(handlers, conf)

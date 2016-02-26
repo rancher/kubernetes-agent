@@ -117,7 +117,7 @@ func (h *syncHandler) getPod(event *revents.Event) (ns, name string) {
 	} else if name, ok = labels["io.kubernetes.pod.name"]; ok {
 		// try to parse
 		parts := strings.SplitN(name, "/", 2)
-		if len(parts) == 0 {
+		if len(parts) == 2 {
 			ns, name = parts[0], parts[1]
 		}
 	}

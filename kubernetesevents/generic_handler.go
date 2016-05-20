@@ -105,7 +105,10 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 	data := map[string]interface{}{"fields": fields}
 
 	rancherUuid, _ := metadata.Labels["io.rancher.uuid"].(string)
-
+	var vip string
+	if !strings.EqualFold(clusterIp, "None") {
+		vip = clusterIp
+	}
 	service := client.Service{
 		Kind:              kind,
 		Name:              metadata.Name,
@@ -113,7 +116,7 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 		SelectorContainer: selector,
 		Data:              data,
 		Uuid:              rancherUuid,
-		Vip:               clusterIp,
+		Vip:               vip,
 	}
 	serviceEvent.Service = service
 

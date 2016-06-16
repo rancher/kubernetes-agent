@@ -8,9 +8,9 @@ import (
 func NewReply(event *revents.Event) *client.Publish {
 	return &client.Publish{
 		Name:         event.ReplyTo,
-		PreviousIds:  []string{event.Id},
+		PreviousIds:  []string{event.ID},
 		ResourceType: event.ResourceType,
-		ResourceId:   event.ResourceId,
+		ResourceId:   event.ResourceID,
 	}
 }
 

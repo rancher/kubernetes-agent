@@ -25,3 +25,6 @@
 [submodule "vendor/gopkg.in/check.v1"]
 	path = vendor/gopkg.in/check.v1
 	url = https://github.com/go-check/check.git
+[submodule "vendor/github.com/rancher/go-rancher-metadata"]
+	path = vendor/github.com/rancher/go-rancher-metadata
+	url = https://github.com/rancher/go-rancher-metadata.git

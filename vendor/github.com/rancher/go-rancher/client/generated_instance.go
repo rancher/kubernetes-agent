@@ -17,6 +17,8 @@ type Instance struct {
 
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
+	HostId string `json:"hostId,omitempty" yaml:"host_id,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
@@ -60,6 +62,8 @@ type InstanceOperations interface {
 
 	ActionDeallocate(*Instance) (*Instance, error)
 
+	ActionError(*Instance) (*Instance, error)
+
 	ActionMigrate(*Instance) (*Instance, error)
 
 	ActionPurge(*Instance) (*Instance, error)
@@ -77,6 +81,8 @@ type InstanceOperations interface {
 	ActionUpdate(*Instance) (*Instance, error)
 
 	ActionUpdatehealthy(*Instance) (*Instance, error)
+
+	ActionUpdatereinitializing(*Instance) (*Instance, error)
 
 	ActionUpdateunhealthy(*Instance) (*Instance, error)
 }
@@ -152,6 +158,15 @@ func (c *InstanceClient) ActionDeallocate(resource *Instance) (*Instance, error)
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(INSTANCE_TYPE, "deallocate", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *InstanceClient) ActionError(resource *Instance) (*Instance, error) {
+
+	resp := &Instance{}
+
+	err := c.rancherClient.doAction(INSTANCE_TYPE, "error", &resource.Resource, nil, resp)
 
 	return resp, err
 }
@@ -233,6 +248,15 @@ func (c *InstanceClient) ActionUpdatehealthy(resource *Instance) (*Instance, err
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(INSTANCE_TYPE, "updatehealthy", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *InstanceClient) ActionUpdatereinitializing(resource *Instance) (*Instance, error) {
+
+	resp := &Instance{}
+
+	err := c.rancherClient.doAction(INSTANCE_TYPE, "updatereinitializing", &resource.Resource, nil, resp)
 
 	return resp, err
 }

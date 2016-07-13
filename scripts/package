@@ -1,15 +1,14 @@
 #!/bin/bash
+set -e
 
-cd $(dirname $0)/..
+source $(dirname $0)/version
 
-. ./scripts/common_functions
+cd $(dirname $0)/../package
 
-set_project_vars
+TAG=${TAG:-${VERSION}}
+REPO=${REPO:-rancher}
 
-rm -rf dist
-mkdir -p dist/artifacts
+cp ../bin/kubernetes-agent .
+docker build -t ${REPO}/kubernetes-agent:${TAG} .
 
-cd build
-echo "Packaging:"
-tar cvJf ../dist/artifacts/$PROJECT.tar.xz ./*
-echo Created dist/artifacts/$PROJECT.tar.xz
+echo Built ${REPO}/kubernetes-agent:${TAG}

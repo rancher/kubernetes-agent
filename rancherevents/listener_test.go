@@ -8,7 +8,7 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"gopkg.in/check.v1"
 
-	revents "github.com/rancher/go-machine-service/events"
+	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/client"
 	"github.com/rancher/kubernetes-model/model"
 
@@ -70,7 +70,7 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 	container := containers[0]
 	event := &revents.Event{
 		ReplyTo: "event-1",
-		Id:      "event-id-1",
+		ID:      "event-id-1",
 		Data: map[string]interface{}{
 			"instanceHostMap": map[string]interface{}{
 				"instance": map[string]interface{}{

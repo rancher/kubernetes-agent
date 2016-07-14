@@ -9,9 +9,15 @@ type Ldapconfig struct {
 
 	AccessMode string `json:"accessMode,omitempty" yaml:"access_mode,omitempty"`
 
+	AllowedIdentities []interface{} `json:"allowedIdentities,omitempty" yaml:"allowed_identities,omitempty"`
+
+	ConnectionTimeout int64 `json:"connectionTimeout,omitempty" yaml:"connection_timeout,omitempty"`
+
 	Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
 
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+
+	GroupMemberMappingAttribute string `json:"groupMemberMappingAttribute,omitempty" yaml:"group_member_mapping_attribute,omitempty"`
 
 	GroupNameField string `json:"groupNameField,omitempty" yaml:"group_name_field,omitempty"`
 
@@ -38,6 +44,8 @@ type Ldapconfig struct {
 	UserEnabledAttribute string `json:"userEnabledAttribute,omitempty" yaml:"user_enabled_attribute,omitempty"`
 
 	UserLoginField string `json:"userLoginField,omitempty" yaml:"user_login_field,omitempty"`
+
+	UserMemberAttribute string `json:"userMemberAttribute,omitempty" yaml:"user_member_attribute,omitempty"`
 
 	UserNameField string `json:"userNameField,omitempty" yaml:"user_name_field,omitempty"`
 

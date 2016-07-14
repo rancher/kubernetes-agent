@@ -13,6 +13,8 @@ type Container struct {
 
 	AllocationState string `json:"allocationState,omitempty" yaml:"allocation_state,omitempty"`
 
+	BlkioDeviceOptions map[string]interface{} `json:"blkioDeviceOptions,omitempty" yaml:"blkio_device_options,omitempty"`
+
 	Build *DockerBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
 	CapAdd []string `json:"capAdd,omitempty" yaml:"cap_add,omitempty"`
@@ -67,6 +69,8 @@ type Container struct {
 
 	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
 
+	HostId string `json:"hostId,omitempty" yaml:"host_id,omitempty"`
+
 	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 
 	ImageUuid string `json:"imageUuid,omitempty" yaml:"image_uuid,omitempty"`
@@ -118,6 +122,8 @@ type Container struct {
 	RestartPolicy *RestartPolicy `json:"restartPolicy,omitempty" yaml:"restart_policy,omitempty"`
 
 	SecurityOpt []string `json:"securityOpt,omitempty" yaml:"security_opt,omitempty"`
+
+	StartCount int64 `json:"startCount,omitempty" yaml:"start_count,omitempty"`
 
 	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
 
@@ -172,11 +178,15 @@ type ContainerOperations interface {
 
 	ActionDeallocate(*Container) (*Instance, error)
 
+	ActionError(*Container) (*Instance, error)
+
 	ActionExecute(*Container, *ContainerExec) (*HostAccess, error)
 
 	ActionLogs(*Container, *ContainerLogs) (*HostAccess, error)
 
 	ActionMigrate(*Container) (*Instance, error)
+
+	ActionProxy(*Container, *ContainerProxy) (*HostAccess, error)
 
 	ActionPurge(*Container) (*Instance, error)
 
@@ -195,6 +205,8 @@ type ContainerOperations interface {
 	ActionUpdate(*Container) (*Instance, error)
 
 	ActionUpdatehealthy(*Container) (*Instance, error)
+
+	ActionUpdatereinitializing(*Container) (*Instance, error)
 
 	ActionUpdateunhealthy(*Container) (*Instance, error)
 }
@@ -274,6 +286,15 @@ func (c *ContainerClient) ActionDeallocate(resource *Container) (*Instance, erro
 	return resp, err
 }
 
+func (c *ContainerClient) ActionError(resource *Container) (*Instance, error) {
+
+	resp := &Instance{}
+
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "error", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
 func (c *ContainerClient) ActionExecute(resource *Container, input *ContainerExec) (*HostAccess, error) {
 
 	resp := &HostAccess{}
@@ -297,6 +318,15 @@ func (c *ContainerClient) ActionMigrate(resource *Container) (*Instance, error) 
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(CONTAINER_TYPE, "migrate", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *ContainerClient) ActionProxy(resource *Container, input *ContainerProxy) (*HostAccess, error) {
+
+	resp := &HostAccess{}
+
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "proxy", &resource.Resource, input, resp)
 
 	return resp, err
 }
@@ -378,6 +408,15 @@ func (c *ContainerClient) ActionUpdatehealthy(resource *Container) (*Instance, e
 	resp := &Instance{}
 
 	err := c.rancherClient.doAction(CONTAINER_TYPE, "updatehealthy", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *ContainerClient) ActionUpdatereinitializing(resource *Container) (*Instance, error) {
+
+	resp := &Instance{}
+
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "updatereinitializing", &resource.Resource, nil, resp)
 
 	return resp, err
 }

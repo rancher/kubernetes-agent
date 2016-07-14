@@ -9,9 +9,13 @@ type LoadBalancerService struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	AssignServiceIpAddress bool `json:"assignServiceIpAddress,omitempty" yaml:"assign_service_ip_address,omitempty"`
+
 	CertificateIds []string `json:"certificateIds,omitempty" yaml:"certificate_ids,omitempty"`
 
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	CurrentScale int64 `json:"currentScale,omitempty" yaml:"current_scale,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
 
@@ -25,6 +29,8 @@ type LoadBalancerService struct {
 
 	Fqdn string `json:"fqdn,omitempty" yaml:"fqdn,omitempty"`
 
+	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	LaunchConfig *LaunchConfig `json:"launchConfig,omitempty" yaml:"launch_config,omitempty"`
@@ -35,13 +41,21 @@ type LoadBalancerService struct {
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
+	PublicEndpoints []interface{} `json:"publicEndpoints,omitempty" yaml:"public_endpoints,omitempty"`
+
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	RetainIp bool `json:"retainIp,omitempty" yaml:"retain_ip,omitempty"`
+
 	Scale int64 `json:"scale,omitempty" yaml:"scale,omitempty"`
 
+	ScalePolicy *ScalePolicy `json:"scalePolicy,omitempty" yaml:"scale_policy,omitempty"`
+
 	SelectorLink string `json:"selectorLink,omitempty" yaml:"selector_link,omitempty"`
+
+	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
@@ -51,7 +65,7 @@ type LoadBalancerService struct {
 
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
-	Upgrade ServiceUpgrade `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
+	Upgrade *ServiceUpgrade `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
 
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 
@@ -91,6 +105,8 @@ type LoadBalancerServiceOperations interface {
 	ActionRemove(*LoadBalancerService) (*Service, error)
 
 	ActionRemoveservicelink(*LoadBalancerService, *AddRemoveLoadBalancerServiceLinkInput) (*Service, error)
+
+	ActionRestart(*LoadBalancerService, *ServiceRestart) (*Service, error)
 
 	ActionRollback(*LoadBalancerService) (*Service, error)
 
@@ -217,6 +233,15 @@ func (c *LoadBalancerServiceClient) ActionRemoveservicelink(resource *LoadBalanc
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "removeservicelink", &resource.Resource, input, resp)
+
+	return resp, err
+}
+
+func (c *LoadBalancerServiceClient) ActionRestart(resource *LoadBalancerService, input *ServiceRestart) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "restart", &resource.Resource, input, resp)
 
 	return resp, err
 }

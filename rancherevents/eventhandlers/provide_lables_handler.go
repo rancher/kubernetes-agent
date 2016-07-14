@@ -5,7 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mitchellh/mapstructure"
-	revents "github.com/rancher/go-machine-service/events"
+	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/client"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	util "github.com/rancher/kubernetes-agent/rancherevents/util"
@@ -22,7 +22,7 @@ func NewProvideLablesHandler(kClient *kubernetesclient.Client) *syncHandler {
 }
 
 func (h *syncHandler) Handler(event *revents.Event, cli *client.RancherClient) error {
-	log.Infof("Received event: Name: %s, Event Id: %s, Resource Id: %s", event.Name, event.Id, event.ResourceId)
+	log.Infof("Received event: Name: %s, Event Id: %s, Resource Id: %s", event.Name, event.ID, event.ResourceID)
 
 	namespace, name := h.getPod(event)
 	if namespace == "" || name == "" {
@@ -76,7 +76,7 @@ func (h *syncHandler) Handler(event *revents.Event, cli *client.RancherClient) e
 
 	reply := util.NewReply(event)
 	reply.ResourceType = "instanceHostMap"
-	reply.ResourceId = event.ResourceId
+	reply.ResourceId = event.ResourceID
 	reply.Data = replyData
 	log.Infof("Reply: %+v", reply)
 	err = util.PublishReply(reply, cli)

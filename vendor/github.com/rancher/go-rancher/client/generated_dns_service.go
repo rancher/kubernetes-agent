@@ -9,6 +9,8 @@ type DnsService struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	AssignServiceIpAddress bool `json:"assignServiceIpAddress,omitempty" yaml:"assign_service_ip_address,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -20,6 +22,8 @@ type DnsService struct {
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
 	Fqdn string `json:"fqdn,omitempty" yaml:"fqdn,omitempty"`
+
+	HealthState string `json:"healthState,omitempty" yaml:"health_state,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -33,7 +37,11 @@ type DnsService struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	RetainIp bool `json:"retainIp,omitempty" yaml:"retain_ip,omitempty"`
+
 	SelectorLink string `json:"selectorLink,omitempty" yaml:"selector_link,omitempty"`
+
+	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
@@ -43,7 +51,7 @@ type DnsService struct {
 
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
-	Upgrade ServiceUpgrade `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
+	Upgrade *ServiceUpgrade `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
 
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
@@ -81,6 +89,8 @@ type DnsServiceOperations interface {
 	ActionRemove(*DnsService) (*Service, error)
 
 	ActionRemoveservicelink(*DnsService, *AddRemoveServiceLinkInput) (*Service, error)
+
+	ActionRestart(*DnsService, *ServiceRestart) (*Service, error)
 
 	ActionRollback(*DnsService) (*Service, error)
 
@@ -207,6 +217,15 @@ func (c *DnsServiceClient) ActionRemoveservicelink(resource *DnsService, input *
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(DNS_SERVICE_TYPE, "removeservicelink", &resource.Resource, input, resp)
+
+	return resp, err
+}
+
+func (c *DnsServiceClient) ActionRestart(resource *DnsService, input *ServiceRestart) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(DNS_SERVICE_TYPE, "restart", &resource.Resource, input, resp)
 
 	return resp, err
 }

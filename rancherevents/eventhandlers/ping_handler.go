@@ -1,7 +1,7 @@
 package eventhandlers
 
 import (
-	revents "github.com/rancher/go-machine-service/events"
+	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/client"
 	util "github.com/rancher/kubernetes-agent/rancherevents/util"
 )

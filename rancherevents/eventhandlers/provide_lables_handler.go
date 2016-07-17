@@ -1,11 +1,10 @@
 package eventhandlers
 
 import (
-	"strings"
-
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/mitchellh/mapstructure"
-	revents "github.com/rancher/event-subscriber/events"
+	"github.com/pkg/errors"
+	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/client"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	util "github.com/rancher/kubernetes-agent/rancherevents/util"
@@ -21,49 +20,59 @@ func NewProvideLablesHandler(kClient *kubernetesclient.Client) *syncHandler {
 	}
 }
 
-func (h *syncHandler) Handler(event *revents.Event, cli *client.RancherClient) error {
-	log.Infof("Received event: Name: %s, Event Id: %s, Resource Id: %s", event.Name, event.ID, event.ResourceID)
+func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) error {
+	log := logrus.WithFields(logrus.Fields{
+		"eventName":  event.Name,
+		"eventID":    event.ID,
+		"resourceID": event.ResourceID,
+	})
+	log.Infof("Rancher event: %#v", event)
+	labels := map[string]string{}
 
-	namespace, name := h.getPod(event)
-	if namespace == "" || name == "" {
-		if err := util.CreateAndPublishReply(event, cli); err != nil {
-			return err
-		}
-		return nil
+	containerLabels, err := h.parseContainerLabels(event)
+	if err != nil {
+		log.Errorf("Failed to read labels", err)
+		return util.CreateAndPublishReply(event, cli)
 	}
 
+	namespace := containerLabels["io.kubernetes.pod.namespace"]
+	name := containerLabels["io.kubernetes.pod.name"]
+	if namespace == "" || name == "" {
+		return util.CreateAndPublishReply(event, cli)
+	}
+
+	if found, err := h.copyPodLabels(namespace, name, labels); err != nil {
+		return err
+	} else if !found {
+		return util.CreateAndPublishReply(event, cli)
+	}
+
+	labels["io.rancher.service.deployment.unit"] = containerLabels["io.kubernetes.pod.uid"]
+	labels["io.rancher.stack.name"] = namespace
+
+	if isPodContainer(containerLabels) {
+		labels["io.rancher.container.network"] = "true"
+		labels["io.rancher.service.launch.config"] = "io.rancher.service.primary.launch.config"
+		labels["io.rancher.container.display_name"] = containerLabels["io.kubernetes.pod.name"]
+	} else {
+		labels["io.rancher.container.display_name"] = containerLabels["io.kubernetes.container.name"]
+	}
+
+	return h.replyWithLabels(event, cli, labels)
+}
+
+func isPodContainer(containerLabels map[string]string) bool {
+	return containerLabels["io.kubernetes.container.name"] == "POD"
+}
+
+func (h *syncHandler) copyPodLabels(namespace, name string, labels map[string]string) (bool, error) {
 	pod, err := h.kClient.Pod.ByName(namespace, name)
 	if err != nil {
-		log.Warnf("Error looking up pod: %#v", err)
 		if apiErr, ok := err.(*client.ApiError); ok && apiErr.StatusCode == 404 {
-			if err := util.CreateAndPublishReply(event, cli); err != nil {
-				return err
-			}
-			return nil
+			return false, nil
 		}
-		return err
+		return true, errors.Wrap(err, "lookup pod")
 	}
-
-	/*
-	   Building this:
-	   {instancehostmap: {
-	       instance: {
-	           +data: {
-	               +fields: {
-	                 labels: {
-	*/
-	replyData := make(map[string]interface{})
-	ihm := make(map[string]interface{})
-	i := make(map[string]interface{})
-	data := make(map[string]interface{})
-	fields := make(map[string]interface{})
-	labels := make(map[string]string)
-
-	replyData["instanceHostMap"] = ihm
-	ihm["instance"] = i
-	i["+data"] = data
-	data["+fields"] = fields
-	fields["+labels"] = labels
 
 	for key, v := range pod.Metadata.Labels {
 		if val, ok := v.(string); ok {
@@ -71,56 +80,40 @@ func (h *syncHandler) Handler(event *revents.Event, cli *client.RancherClient) e
 		}
 	}
 
-	labels["io.rancher.service.deployment.unit"] = pod.Metadata.Uid
-	labels["io.rancher.stack.name"] = pod.Metadata.Namespace
-
-	reply := util.NewReply(event)
-	reply.ResourceType = "instanceHostMap"
-	reply.ResourceId = event.ResourceID
-	reply.Data = replyData
-	log.Infof("Reply: %+v", reply)
-	err = util.PublishReply(reply, cli)
-	if err != nil {
-		return err
-	}
-	return nil
+	return true, nil
 }
 
-func (h *syncHandler) getPod(event *revents.Event) (ns, name string) {
-	ihm := &struct {
-		IHM struct {
-			I struct {
-				D struct {
-					F struct {
-						Labels map[string]string `mapstructure:"labels"`
-					} `mapstructure:"fields"`
-				} `mapstructure:"data"`
-			} `mapstructure:"instance"`
-		} `mapstructure:"instanceHostMap"`
+func (h *syncHandler) replyWithLabels(event *events.Event, cli *client.RancherClient, labels map[string]string) error {
+	reply := util.NewReply(event)
+	reply.ResourceType = event.ResourceType
+	reply.ResourceId = event.ResourceID
+	reply.Data = map[string]interface{}{
+		"instance": map[string]interface{}{
+			"+data": map[string]interface{}{
+				"+fields": map[string]interface{}{
+					"+labels": labels,
+				},
+			},
+		},
+	}
+	logrus.WithField("eventID", event.ID).Infof("Reply: %+v", reply)
+	return util.PublishReply(reply, cli)
+}
+
+func (h *syncHandler) parseContainerLabels(event *events.Event) (map[string]string, error) {
+	i := &struct {
+		I struct {
+			D struct {
+				F struct {
+					Labels map[string]string `mapstructure:"labels"`
+				} `mapstructure:"fields"`
+			} `mapstructure:"data"`
+		} `mapstructure:"instance"`
 	}{}
 
-	err := mapstructure.Decode(event.Data, &ihm)
-	if err != nil {
-		log.Error("Cannot parse event")
-		return
+	if err := mapstructure.Decode(event.Data, &i); err != nil {
+		return nil, errors.Wrap(err, "Decoding map data")
 	}
 
-	labels := ihm.IHM.I.D.F.Labels
-	if len(labels) == 0 {
-		return
-	}
-
-	var ok bool
-	if ns, ok = labels["io.kubernetes.pod.namespace"]; ok {
-		// version >= 1.2
-		name = labels["io.kubernetes.pod.name"]
-	} else if name, ok = labels["io.kubernetes.pod.name"]; ok {
-		// try to parse
-		parts := strings.SplitN(name, "/", 2)
-		if len(parts) == 2 {
-			ns, name = parts[0], parts[1]
-		}
-	}
-
-	return
+	return i.I.D.F.Labels, nil
 }

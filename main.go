@@ -8,6 +8,7 @@ import (
 
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/healthcheck"
+	"github.com/rancher/kubernetes-agent/hostlabels"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-agent/kubernetesevents"
 	"github.com/rancher/kubernetes-agent/rancherevents"
@@ -58,6 +59,11 @@ func main() {
 			Value: &cli.StringSlice{"namespaces", "services", "replicationcontrollers", "pods"},
 			Usage: "Which k8s kinds to watch and report changes to Rancher",
 		},
+		cli.IntFlag{
+			Name:  "host-labels-update-interval",
+			Value: 5,
+			Usage: "The frequency at which host labels should be updated",
+		},
 	}
 
 	app.Run(os.Args)
@@ -98,6 +104,12 @@ func launch(c *cli.Context) {
 	go func(rc chan error) {
 		err := healthcheck.StartHealthCheck(conf.HealthCheckPort)
 		log.Errorf("Rancher healthcheck exited with error: %s", err)
+		rc <- err
+	}(resultChan)
+
+	go func(rc chan error) {
+		err := hostlabels.StartHostLabelSync(c.Int("host-labels-update-interval"), kClient)
+		log.Errorf("Rancher hostLabel sync service exited with error: %s", err)
 		rc <- err
 	}(resultChan)
 

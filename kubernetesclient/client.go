@@ -23,6 +23,7 @@ func NewClient(apiURL string, debug bool) *Client {
 	client.Namespace = newNamespaceClient(client)
 	client.ReplicationController = newReplicationControllerClient(client)
 	client.Service = newServiceClient(client)
+	client.Node = newNodeClient(client)
 
 	return client
 }
@@ -33,6 +34,7 @@ type Client struct {
 	Namespace             NamespaceOperations
 	ReplicationController ReplicationControllerOperations
 	Service               ServiceOperations
+	Node                  NodeOperations
 }
 
 type baseClient struct {

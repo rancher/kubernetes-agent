@@ -55,8 +55,10 @@ func main() {
 			EnvVar: "HEALTH_CHECK_PORT",
 		},
 		cli.StringSliceFlag{
-			Name:  "watch-kind",
-			Value: &cli.StringSlice{"namespaces", "services", "replicationcontrollers", "pods"},
+			Name: "watch-kind",
+			Value: &cli.StringSlice{"namespaces", "services", "replicationcontrollers", "pods",
+				"deployments", "ingresses", "jobs", "horizontalpodautoscalers", "persistentvolumes",
+				"persistentvolumeclaims", "replicasets", "secrets"},
 			Usage: "Which k8s kinds to watch and report changes to Rancher",
 		},
 		cli.IntFlag{

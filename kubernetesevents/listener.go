@@ -15,9 +15,10 @@ import (
 	"github.com/rancher/kubernetes-model/model"
 )
 
-const pathTemplate string = "/api/v1/%s"
-
-var waits []int = []int{1, 2, 4, 8, 16, 0}
+var (
+	pathTemplates = []string{"/api/v1/%s", "/apis/extensions/v1beta1/%s"}
+	waits         = []int{0, 1, 2, 4, 8, 16, 0}
+)
 
 type Handler interface {
 	Handle(event model.WatchEvent) error
@@ -32,27 +33,32 @@ func ConnectToEventStream(handlers []Handler, conf config.Config) error {
 	doneChan := make(chan error)
 
 	for _, handler := range handlers {
-		url := buildURL(baseUrl, handler.GetKindHandled())
-		log.WithFields(log.Fields{"url": url}).Info("Connecting to event stream.")
-
 		dialer := &websocket.Dialer{}
 		headers := http.Header{}
 		headers.Add("Origin", "http://kubernetes-agent")
 
+	outer:
 		for idx, wait := range waits {
-			ws, _, err := dialer.Dial(url, headers)
-			if err != nil {
-				if idx < len(waits)-1 {
-					log.Warnf("Error connecting to %s. Try %v of %v. Will wait %v seconds and try again. Error: %#v", url, idx, len(waits), wait, err)
-					time.Sleep(time.Second * time.Duration(wait))
-					continue
+			for _, template := range pathTemplates {
+				url := buildURL(baseUrl, handler.GetKindHandled(), template)
+				log.WithFields(log.Fields{"url": url}).Info("Connecting to event stream.")
+
+				ws, _, err := dialer.Dial(url, headers)
+				if err != nil {
+					if idx < len(waits)-1 {
+						if idx > 0 {
+							log.Warnf("Error connecting to %s. Try %v of %v. Will wait %v seconds and try again. Error: %#v", url, idx, len(waits), wait, err)
+						}
+						time.Sleep(time.Second * time.Duration(wait))
+						continue
+					} else {
+						log.Error("Failed to connet to %s. Giving up. Error: %#v", url, err)
+						return err
+					}
 				} else {
-					log.Error("Failed to connet to %s. Giving up. Error: %#v", url, err)
-					return err
+					go readMessages(ws, url, doneChan, handler)
+					break outer
 				}
-			} else {
-				go readMessages(ws, url, doneChan, handler)
-				break
 			}
 		}
 	}
@@ -86,13 +92,13 @@ func readMessages(ws *websocket.Conn, url string, rc chan<- error, handler Handl
 	}
 }
 
-func buildURL(baseUrl string, resource string) string {
+func buildURL(baseUrl, resource, template string) string {
 	u, err := url.Parse(baseUrl)
 	if err != nil {
 		// Fatal logging. Will cause program exit
 		log.WithFields(log.Fields{"error": err, "baseUrl": baseUrl}).Fatal("Couldn't parse URL.")
 	}
-	path := fmt.Sprintf(pathTemplate, resource)
+	path := fmt.Sprintf(template, resource)
 	u.Path = path
 	q := u.Query()
 	q.Set("watch", "true")

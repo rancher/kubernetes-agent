@@ -80,7 +80,7 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 							"labels": map[string]interface{}{
 								"io.kubernetes.pod.namespace":  "default",
 								"io.kubernetes.pod.name":       "pod-test-1",
-								"io.kubernetes.container.name": "pod-test",
+								"io.kubernetes.container.name": "POD",
 								"io.kubernetes.pod.uid":        pod.Metadata.Uid,
 							},
 						},
@@ -108,7 +108,9 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 			"env": "dev",
 			"io.rancher.service.deployment.unit": pod.Metadata.Uid,
 			"io.rancher.stack.name":              "default",
-			"io.rancher.container.display_name":  "pod-test",
+			"io.rancher.container.display_name":  "pod-test-1",
+			"io.rancher.container.network":       "true",
+			"io.rancher.service.launch.config":   "io.rancher.service.primary.launch.config",
 		})
 }
 

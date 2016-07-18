@@ -3,6 +3,7 @@ package hostlabels
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -40,6 +41,20 @@ type fakeKubeNodeHandler struct {
 	nodes map[string]*model.Node
 }
 
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
+}
+
 func (f *fakeKubeNodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// GET Node
 	if r.Method == http.MethodGet {
@@ -75,8 +90,12 @@ func TestMain(m *testing.M) {
 	}
 	errChan := make(chan error, 1)
 	metadataMux.Handle("/2015-12-19/hosts/", metadataHandler)
+	srvLn, err := net.Listen("tcp", srv.Addr)
+	if err != nil {
+		log.Fatalf("Error listening on tcp port 42500: %v", err)
+	}
 	go func() {
-		errChan <- srv.ListenAndServe()
+		errChan <- srv.Serve(tcpKeepAliveListener{srvLn.(*net.TCPListener)})
 	}()
 	kubeMux := http.NewServeMux()
 	ksrv := http.Server{
@@ -84,8 +103,12 @@ func TestMain(m *testing.M) {
 		Handler: kubeMux,
 	}
 	kubeMux.Handle("/api/v1/nodes/", kubeHandler)
+	ksrvLn, err := net.Listen("tcp", ksrv.Addr)
+	if err != nil {
+		log.Fatalf("Error listening on tcp port 42501: %v", err)
+	}
 	go func() {
-		errChan <- ksrv.ListenAndServe()
+		errChan <- ksrv.Serve(tcpKeepAliveListener{ksrvLn.(*net.TCPListener)})
 	}()
 	intChan := make(chan int, 1)
 	go func() {
@@ -94,7 +117,7 @@ func TestMain(m *testing.M) {
 	var returnVal int
 	select {
 	case err := <-errChan:
-		log.Fatalf("Error starting metadata/kuberserver, [%v]", err)
+		log.Fatalf("Error while running metadata/kuberserver, [%v]", err)
 	case returnVal = <-intChan:
 	}
 	os.Exit(returnVal)

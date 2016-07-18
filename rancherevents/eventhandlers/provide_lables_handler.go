@@ -2,7 +2,6 @@ package eventhandlers
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/client"
@@ -101,19 +100,10 @@ func (h *syncHandler) replyWithLabels(event *events.Event, cli *client.RancherCl
 }
 
 func (h *syncHandler) parseContainerLabels(event *events.Event) (map[string]string, error) {
-	i := &struct {
-		I struct {
-			D struct {
-				F struct {
-					Labels map[string]string `mapstructure:"labels"`
-				} `mapstructure:"fields"`
-			} `mapstructure:"data"`
-		} `mapstructure:"instance"`
-	}{}
-
-	if err := mapstructure.Decode(event.Data, &i); err != nil {
-		return nil, errors.Wrap(err, "Decoding map data")
+	labels := GetStringMap(event.Data, "instanceHostMap", "instance", "data", "fields", "labels")
+	if len(labels) == 0 {
+		labels = GetStringMap(event.Data, "instance", "data", "fields", "labels")
 	}
 
-	return i.I.D.F.Labels, nil
+	return labels, nil
 }

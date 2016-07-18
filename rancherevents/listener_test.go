@@ -78,7 +78,10 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 					"data": map[string]interface{}{
 						"fields": map[string]interface{}{
 							"labels": map[string]interface{}{
-								"io.kubernetes.pod.name": "default/pod-test-1",
+								"io.kubernetes.pod.namespace":  "default",
+								"io.kubernetes.pod.name":       "pod-test-1",
+								"io.kubernetes.container.name": "pod-test",
+								"io.kubernetes.pod.uid":        pod.Metadata.Uid,
 							},
 						},
 					},
@@ -96,12 +99,17 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 	pub := <-s.publishChan
 	c.Assert(pub.Name, check.Equals, "event-1")
 	c.Assert(pub.PreviousIds, check.DeepEquals, []string{"event-id-1"})
-	instance := get(pub.Data["instanceHostMap"], "instance")
+	instance := get(pub.Data, "instance")
 	data := get(instance, "+data")
 	fields := get(data, "+fields")
 	newLabels := get(fields, "+labels")
 	c.Assert(newLabels, check.DeepEquals,
-		map[string]string{"env": "dev", "io.rancher.service.deployment.unit": pod.Metadata.Uid, "io.rancher.stack.name": "default"})
+		map[string]string{
+			"env": "dev",
+			"io.rancher.service.deployment.unit": pod.Metadata.Uid,
+			"io.rancher.stack.name":              "default",
+			"io.rancher.container.display_name":  "pod-test",
+		})
 }
 
 func get(theMap interface{}, key string) interface{} {
@@ -145,7 +153,7 @@ func (s *ListenerTestSuite) createPod(c *check.C) (*model.Pod, []docker.APIConta
 
 	opts := docker.ListContainersOptions{
 		Filters: map[string][]string{
-			"label": {"io.kubernetes.pod.name=default/pod-test-1"},
+			"label": {"io.kubernetes.pod.name=pod-test-1"},
 		},
 	}
 	for i := 0; i < 10; i++ {

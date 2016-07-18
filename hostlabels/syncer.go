@@ -88,7 +88,9 @@ func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *
 				changed = true
 			}
 		}
-		if changed {
+		retryCount := 0
+		maxRetryCount := 3
+		for changed {
 			node, err := getKubeNode(kClient, host.Hostname)
 			if err != nil {
 				log.Errorf("Error getting node: [%s] by name from kubernetes: [%v]", host.Hostname, err)
@@ -114,7 +116,10 @@ func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *
 			_, err = kClient.Node.ReplaceNode(node)
 			if err != nil {
 				log.Errorf("Error updating node [%s] with new host labels, err :[%v]", host.Hostname, err)
-				return err
+				if retryCount < maxRetryCount {
+					retryCount = retryCount + 1
+					continue
+				}
 			}
 			changed = false
 		}

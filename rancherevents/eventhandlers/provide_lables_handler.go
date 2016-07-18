@@ -40,12 +40,6 @@ func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) er
 		return util.CreateAndPublishReply(event, cli)
 	}
 
-	if found, err := h.copyPodLabels(namespace, name, labels); err != nil {
-		return err
-	} else if !found {
-		return util.CreateAndPublishReply(event, cli)
-	}
-
 	labels["io.rancher.service.deployment.unit"] = containerLabels["io.kubernetes.pod.uid"]
 	labels["io.rancher.stack.name"] = namespace
 
@@ -53,6 +47,11 @@ func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) er
 		labels["io.rancher.container.network"] = "true"
 		labels["io.rancher.service.launch.config"] = "io.rancher.service.primary.launch.config"
 		labels["io.rancher.container.display_name"] = containerLabels["io.kubernetes.pod.name"]
+		if found, err := h.copyPodLabels(namespace, name, labels); err != nil {
+			return err
+		} else if !found {
+			return util.CreateAndPublishReply(event, cli)
+		}
 	} else {
 		labels["io.rancher.container.display_name"] = containerLabels["io.kubernetes.container.name"]
 	}

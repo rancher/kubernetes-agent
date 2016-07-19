@@ -97,6 +97,9 @@ func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *
 				continue
 			}
 			c.Set(host.Hostname, node, 0)
+			if node.Metadata.Annotations == nil {
+				node.Metadata.Annotations = make(map[string]interface{})
+			}
 			rancherLabelsMetadataStore := node.Metadata.Annotations
 			for k, v1 := range host.Labels {
 				node.Metadata.Labels[k] = v1

@@ -101,7 +101,7 @@ func (s *GenerichandlerTestSuite) TestService(c *check.C) {
 					c.Assert(service.Kind, check.Equals, "kubernetesService")
 					c.Assert(service.Name, check.Equals, svcName)
 					c.Assert(service.ExternalId, check.Equals, respSvc.Metadata.Uid)
-					c.Assert(service.SelectorContainer, check.Matches, "foo=bar,env=dev|env=dev,foo=bar")
+					c.Assert(service.SelectorContainer, check.Matches, "foo=bar,env=dev,io.kubernetes.pod.namespace=default|env=dev,foo=bar,io.kubernetes.pod.namespace=default|io.kubernetes.pod.namespace=default,foo=bar,env=dev|io.kubernetes.pod.namespace=default,env=dev,foo=bar|foo=bar,io.kubernetes.pod.namespace=default,env=dev|env=dev,io.kubernetes.pod.namespace=default,foo=bar")
 
 					env := event.Environment.(map[string]string)
 					c.Assert(env["name"], check.Equals, "default")
@@ -115,7 +115,7 @@ func (s *GenerichandlerTestSuite) TestService(c *check.C) {
 					c.Assert(service.Kind, check.Equals, "kubernetesService")
 					c.Assert(service.Name, check.Equals, svcName)
 					c.Assert(service.ExternalId, check.Equals, respSvc.Metadata.Uid)
-					c.Assert(service.SelectorContainer, check.Equals, "env=prod,io.kubernetes.pod.namespace=default")
+					c.Assert(service.SelectorContainer, check.Matches, "env=prod,io.kubernetes.pod.namespace=default|io.kubernetes.pod.namespace=default,env=prod")
 					gotMod = true
 				} else if event.EventType == "service.remove" {
 					gotDelete = true

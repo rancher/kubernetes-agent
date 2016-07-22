@@ -52,6 +52,9 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 			kind = svc.Kind
 			selector = svc.Spec.Selector
 			metadata = svc.Metadata
+			if selector != nil {
+				selector["io.kubernetes.pod.namespace"] = metadata.Namespace
+			}
 			clusterIp = svc.Spec.ClusterIP
 		} else {
 			return fmt.Errorf("Unrecognized handled kind [%s].", h.kindHandled)

@@ -115,7 +115,7 @@ func (s *GenerichandlerTestSuite) TestService(c *check.C) {
 					c.Assert(service.Kind, check.Equals, "kubernetesService")
 					c.Assert(service.Name, check.Equals, svcName)
 					c.Assert(service.ExternalId, check.Equals, respSvc.Metadata.Uid)
-					c.Assert(service.SelectorContainer, check.Equals, "env=prod")
+					c.Assert(service.SelectorContainer, check.Equals, "env=prod,io.kubernetes.pod.namespace=default")
 					gotMod = true
 				} else if event.EventType == "service.remove" {
 					gotDelete = true

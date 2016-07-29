@@ -14,15 +14,7 @@ import (
 )
 
 const ServiceKind string = "services"
-const eventTypePrefix string = "service."
-
-func NewHandler(rancherClient *client.RancherClient, kubernetesClient *kubernetesclient.Client, kindHandled string) *GenericHandler {
-	return &GenericHandler{
-		rancherClient: rancherClient,
-		kClient:       kubernetesClient,
-		kindHandled:   kindHandled,
-	}
-}
+const serviceEventTypePrefix string = "service."
 
 // Capable of handling RC and Service events
 type GenericHandler struct {
@@ -146,13 +138,13 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 func constructEventType(event model.WatchEvent) string {
 	switch strings.ToLower(event.Type) {
 	case "added":
-		return eventTypePrefix + "create"
+		return serviceEventTypePrefix + "create"
 	case "modified":
-		return eventTypePrefix + "update"
+		return serviceEventTypePrefix + "update"
 	case "deleted":
-		return eventTypePrefix + "remove"
+		return serviceEventTypePrefix + "remove"
 	default:
-		return eventTypePrefix + event.Type
+		return serviceEventTypePrefix + event.Type
 	}
 }
 

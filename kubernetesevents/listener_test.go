@@ -42,7 +42,7 @@ func (s *GenerichandlerTestSuite) SetUpSuite(c *check.C) {
 		ExternalServiceEvent: mock,
 	}
 
-	svcHandler := NewHandler(mockRancherClient, s.kClient, ServiceKind)
+	svcHandler, _ := NewHandler(mockRancherClient, s.kClient, ServiceKind)
 	handlers := []Handler{svcHandler}
 	go ConnectToEventStream(handlers, conf)
 	time.Sleep(time.Second)

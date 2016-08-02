@@ -76,7 +76,8 @@ func launch(c *cli.Context) {
 	kClient := kubernetesclient.NewClient(conf.KubernetesURL, true)
 
 	svcHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.ServiceKind)
-	handlers := []kubernetesevents.Handler{svcHandler}
+	nsHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.NamespaceKind)
+	handlers := []kubernetesevents.Handler{svcHandler, nsHandler}
 
 	log.Info("Watching changes for kinds: ", c.StringSlice("watch-kind"))
 	for _, kind := range c.StringSlice("watch-kind") {

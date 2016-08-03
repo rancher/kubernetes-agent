@@ -16,6 +16,9 @@ import (
 const ServiceKind string = "services"
 const eventTypePrefix string = "service."
 
+const NamespaceKind string = "namespaces"
+const namespaceEventTypePrefix string = "stack."
+
 func NewHandler(rancherClient *client.RancherClient, kubernetesClient *kubernetesclient.Client, kindHandled string) *GenericHandler {
 	return &GenericHandler{
 		rancherClient: rancherClient,
@@ -42,6 +45,9 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 		var kind string
 		var selector map[string]interface{}
 		var clusterIp string
+		var prefix string
+		var eventPrefix string
+		var serviceEvent = &client.ExternalServiceEvent{}
 		if h.kindHandled == ServiceKind {
 			var svc model.Service
 			mapstructure.Decode(i, &svc)
@@ -52,18 +58,36 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 			kind = svc.Kind
 			selector = svc.Spec.Selector
 			metadata = svc.Metadata
+			eventPrefix = eventTypePrefix
 			if selector != nil {
 				selector["io.kubernetes.pod.namespace"] = metadata.Namespace
 			}
 			clusterIp = svc.Spec.ClusterIP
+		} else if h.kindHandled == NamespaceKind {
+			if event.Type != "DELETED" {
+				return nil
+			}
+			var ns model.Namespace
+			mapstructure.Decode(i, &ns)
+			if ns == (model.Namespace{}) || ns.Spec == nil {
+				log.Infof("Couldn't decode %+v to namespace.", i)
+				return nil
+			}
+
+			prefix = "kubernetes://"
+			metadata = ns.Metadata
+			kind = "Service"
+
+			eventPrefix = namespaceEventTypePrefix
+			serviceEvent.Environment = &client.Environment{
+				Kind: "environment",
+			}
 		} else {
 			return fmt.Errorf("Unrecognized handled kind [%s].", h.kindHandled)
 		}
 
-		serviceEvent := &client.ExternalServiceEvent{
-			ExternalId: metadata.Uid,
-			EventType:  constructEventType(event),
-		}
+		serviceEvent.ExternalId = prefix + metadata.Uid
+		serviceEvent.EventType = constructEventType(eventPrefix, event)
 
 		switch event.Type {
 		case "MODIFIED":
@@ -143,16 +167,16 @@ func (h *GenericHandler) add(selectorMap map[string]interface{}, metadata *model
 	return nil
 }
 
-func constructEventType(event model.WatchEvent) string {
+func constructEventType(eventPrefix string, event model.WatchEvent) string {
 	switch strings.ToLower(event.Type) {
 	case "added":
-		return eventTypePrefix + "create"
+		return eventPrefix + "create"
 	case "modified":
-		return eventTypePrefix + "update"
+		return eventPrefix + "update"
 	case "deleted":
-		return eventTypePrefix + "remove"
+		return eventPrefix + "remove"
 	default:
-		return eventTypePrefix + event.Type
+		return eventPrefix + event.Type
 	}
 }
 

@@ -6,9 +6,11 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	cache "github.com/patrickmn/go-cache"
+
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-model/model"
+	"k8s.io/kubernetes/pkg/util/validation"
 )
 
 type hostLabelSyncer struct {
@@ -60,6 +62,9 @@ func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *
 		changed := false
 		//check for new/updated labels
 		for k, v1 := range host.Labels {
+			if !isValidLabelValue(v1) {
+				continue
+			}
 			if changed {
 				break
 			}
@@ -102,8 +107,13 @@ func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *
 			}
 			rancherLabelsMetadataStore := node.Metadata.Annotations
 			for k, v1 := range host.Labels {
+				if !isValidLabelValue(v1) {
+					log.Infof("skipping invalid label %s=%s", k, v1)
+					continue
+				}
 				node.Metadata.Labels[k] = v1
 				rancherLabelsMetadataStore[toKMetaLabel(k)] = ""
+
 			}
 			for k := range node.Metadata.Labels {
 				if _, ok := rancherLabelsMetadataStore[toKMetaLabel(k)]; !ok {
@@ -128,6 +138,14 @@ func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *
 		}
 	}
 	return nil
+}
+
+func isValidLabelValue(label string) bool {
+	errs := validation.IsValidLabelValue(label)
+	if len(errs) > 0 {
+		return false
+	}
+	return true
 }
 
 func toKMetaLabel(label string) string {

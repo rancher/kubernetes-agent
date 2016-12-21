@@ -66,7 +66,7 @@ func isPodContainer(containerLabels map[string]string) bool {
 func (h *syncHandler) copyPodLabels(namespace, name string, labels map[string]string) (bool, error) {
 	pod, err := h.kClient.Pod.ByName(namespace, name)
 	if err != nil {
-		if apiErr, ok := err.(*client.ApiError); ok && apiErr.StatusCode == 404 {
+		if apiErr, ok := err.(*kubernetesclient.ApiError); ok && apiErr.StatusCode == 404 {
 			return false, nil
 		}
 		return true, errors.Wrap(err, "lookup pod")

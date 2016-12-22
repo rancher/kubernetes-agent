@@ -30,3 +30,17 @@ func CreateAndPublishReply(event *revents.Event, cli *client.RancherClient) erro
 	}
 	return nil
 }
+
+func ErrorReply(event *revents.Event, cli *client.RancherClient, eventError error) error {
+	reply := NewReply(event)
+	if reply.Name == "" {
+		return nil
+	}
+	reply.Transitioning = "error"
+	reply.TransitioningMessage = eventError.Error()
+	err := PublishReply(reply, cli)
+	if err != nil {
+		return err
+	}
+	return nil
+}

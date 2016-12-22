@@ -48,7 +48,7 @@ func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) er
 		labels["io.rancher.service.launch.config"] = "io.rancher.service.primary.launch.config"
 		labels["io.rancher.container.display_name"] = containerLabels["io.kubernetes.pod.name"]
 		if found, err := h.copyPodLabels(namespace, name, labels); err != nil {
-			return err
+			return util.ErrorReply(event, cli, err)
 		} else if !found {
 			return util.CreateAndPublishReply(event, cli)
 		}

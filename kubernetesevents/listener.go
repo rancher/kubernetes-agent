@@ -25,6 +25,15 @@ type Handler interface {
 	GetKindHandled() string
 }
 
+func SyncAndWatchEventStream(handlers []SyncHandler) error {
+	doneChan := make(chan error)
+	for _, handler := range handlers {
+		fifo := NewDeltaFIFO(handler, doneChan)
+		go fifo.Process()
+	}
+	return <-doneChan
+}
+
 func ConnectToEventStream(handlers []Handler, conf config.Config) error {
 	log.Infof("Starting kubernetes event listener configuration: %+v", conf)
 	baseUrl := conf.KubernetesURL

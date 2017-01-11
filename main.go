@@ -83,14 +83,21 @@ func launch(c *cli.Context) {
 
 	kClient := kubernetesclient.NewClient(conf.KubernetesURL, true)
 
-	svcHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.ServiceKind)
+	svcHandler := kubernetesevents.NewServiceHandler(rClient, kClient, conf)
+
 	nsHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.NamespaceKind)
-	handlers := []kubernetesevents.Handler{svcHandler, nsHandler}
+	handlers := []kubernetesevents.Handler{nsHandler}
 
 	log.Info("Watching changes for kinds: ", c.StringSlice("watch-kind"))
 	for _, kind := range c.StringSlice("watch-kind") {
 		handlers = append(handlers, kubernetesevents.NewChangeHandler(rClient, kClient, kind))
 	}
+
+	go func(rc chan error) {
+		err := kubernetesevents.SyncAndWatchEventStream([]kubernetesevents.SyncHandler{svcHandler})
+		log.Errorf("kubernetes Sync and stream listener exited with error: %s", err)
+		rc <- err
+	}(resultChan)
 
 	go func(rc chan error) {
 		err := kubernetesevents.ConnectToEventStream(handlers, conf)

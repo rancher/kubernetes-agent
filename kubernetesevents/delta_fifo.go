@@ -178,10 +178,14 @@ func (d *DeltaFIFO) Process() {
 		return
 	}
 
-	for _, obj := range eventObj["items"].([]interface{}) {
-		var event model.WatchEvent
-		event.Object = obj.(map[string]interface{})
-		event.Type = "ADDED"
-		d.Add(event)
+	items, ok := eventObj["items"].([]interface{})
+	if ok {
+		for _, obj := range items {
+			var event model.WatchEvent
+			event.Object = obj.(map[string]interface{})
+			event.Type = "ADDED"
+			d.Add(event)
+		}
 	}
+
 }

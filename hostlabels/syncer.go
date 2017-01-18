@@ -10,12 +10,12 @@ import (
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-model/model"
-	"k8s.io/kubernetes/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 type hostLabelSyncer struct {
 	kClient            *kubernetesclient.Client
-	metadataClient     *metadata.Client
+	metadataClient     metadata.Client
 	cache              *cache.Cache
 	cacheExpiryMinutes time.Duration
 }
@@ -36,7 +36,7 @@ func getKubeNode(kClient *kubernetesclient.Client, hostname string) (*model.Node
 	return node, err
 }
 
-func sync(kClient *kubernetesclient.Client, metadataClient *metadata.Client, c *cache.Cache) error {
+func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *cache.Cache) error {
 	hosts, err := metadataClient.GetHosts()
 	if err != nil {
 		log.Errorf("Error reading host list from metadata service: [%v], retrying", err)

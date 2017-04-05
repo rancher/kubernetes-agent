@@ -16,8 +16,13 @@ import (
 )
 
 var (
-	pathTemplates = []string{"/api/v1/%s", "/apis/extensions/v1beta1/%s"}
-	waits         = []int{0, 1, 2, 4, 8, 16, 0}
+	pathTemplates = []string{
+		"/api/v1/%s",
+		"/apis/extensions/v1beta1/%s",
+		"/apis/batch/v1/%s",
+		"/apis/autoscaling/v1/%s",
+	}
+	waits = []int{0, 1, 2, 4, 8, 16, 0}
 )
 
 type Handler interface {

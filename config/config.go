@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/codegangsta/cli"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 type Config struct {

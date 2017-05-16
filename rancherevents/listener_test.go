@@ -9,7 +9,7 @@ import (
 	"gopkg.in/check.v1"
 
 	revents "github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-model/model"
 
 	"github.com/rancher/kubernetes-agent/config"

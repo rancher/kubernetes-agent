@@ -1,7 +1,7 @@
 package kubernetesevents
 
 import (
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-model/model"
 )

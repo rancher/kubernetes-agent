@@ -8,7 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-model/model"
 )
@@ -79,7 +79,7 @@ func (h *GenericHandler) Handle(event model.WatchEvent) error {
 			kind = "Service"
 
 			eventPrefix = namespaceEventTypePrefix
-			serviceEvent.Environment = &client.Environment{
+			serviceEvent.Environment = &client.Stack{
 				Kind: "environment",
 			}
 		} else {

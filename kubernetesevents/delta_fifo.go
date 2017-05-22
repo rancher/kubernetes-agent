@@ -10,6 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-model/model"
 )
 
@@ -105,9 +106,12 @@ func (d *DeltaFIFO) Process() {
 
 	go func(done chan error) {
 		wait := 1
-		dialer := &websocket.Dialer{}
+		dialer := &websocket.Dialer{
+			TLSClientConfig: kubernetesclient.GetTLSClientConfig(),
+		}
 		headers := http.Header{}
 		headers.Add("Origin", "http://kubernetes-agent")
+		headers.Add("Authorization", kubernetesclient.GetAuthorizationHeader())
 
 		var err error
 		var ws *websocket.Conn
@@ -141,7 +145,11 @@ func (d *DeltaFIFO) Process() {
 		}
 	}(d.doneChan)
 
-	listClient := http.Client{}
+	listClient := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: kubernetesclient.GetTLSClientConfig(),
+		},
+	}
 	req, err := http.NewRequest("GET", listURL, nil)
 	if err != nil {
 		log.Errorf("Error creating list request %v", err)
@@ -149,6 +157,7 @@ func (d *DeltaFIFO) Process() {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", kubernetesclient.GetAuthorizationHeader())
 
 	resp, err := listClient.Do(req)
 	if err != nil {

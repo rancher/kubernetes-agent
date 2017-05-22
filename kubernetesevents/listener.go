@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/rancher/kubernetes-agent/config"
+	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-model/model"
 )
 
@@ -47,9 +48,12 @@ func ConnectToEventStream(handlers []Handler, conf config.Config) error {
 	doneChan := make(chan error)
 
 	for _, handler := range handlers {
-		dialer := &websocket.Dialer{}
+		dialer := &websocket.Dialer{
+			TLSClientConfig: kubernetesclient.GetTLSClientConfig(),
+		}
 		headers := http.Header{}
 		headers.Add("Origin", "http://kubernetes-agent")
+		headers.Add("Authorization", kubernetesclient.GetAuthorizationHeader())
 
 	outer:
 		for idx, wait := range waits {

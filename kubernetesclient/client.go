@@ -65,6 +65,8 @@ func (c *baseClient) doNoBodyRequest(method string, url string, respObject inter
 		return err
 	}
 
+	req.Header.Set("Authorization", GetAuthorizationHeader())
+
 	if c.debug {
 		fmt.Println("Request => " + method + " " + url)
 	}
@@ -122,6 +124,8 @@ func (c *baseClient) doModify(path string, method string, inputObject interface{
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	req.Header.Set("Authorization", GetAuthorizationHeader())
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -146,7 +150,11 @@ func (c *baseClient) doModify(path string, method string, inputObject interface{
 }
 
 func (c *baseClient) newHttpClient() *http.Client {
-	return &http.Client{}
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: GetTLSClientConfig(),
+		},
+	}
 }
 
 type ApiError struct {

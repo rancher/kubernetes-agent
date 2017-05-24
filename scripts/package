@@ -9,6 +9,8 @@ TAG=${TAG:-${VERSION}}
 REPO=${REPO:-rancher}
 
 cp ../bin/kubernetes-agent .
-docker build -t ${REPO}/kubernetes-agent:${TAG} .
 
-echo Built ${REPO}/kubernetes-agent:${TAG}
+IMAGE=${REPO}/kubernetes-agent:${TAG}
+docker build -t ${IMAGE} .
+echo ${IMAGE} > ../dist/images
+echo Built ${IMAGE}

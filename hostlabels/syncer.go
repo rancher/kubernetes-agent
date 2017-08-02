@@ -13,6 +13,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
+const (
+	rancherHostNameLabel = "io.rancher.host.name"
+	rancherHostUuidLabel = "io.rancher.host.uuid"
+)
+
 type hostLabelSyncer struct {
 	kClient            *kubernetesclient.Client
 	metadataClient     metadata.Client
@@ -43,6 +48,9 @@ func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *c
 		return err
 	}
 	for _, host := range hosts {
+		host.Labels[rancherHostNameLabel] = host.Name
+		host.Labels[rancherHostUuidLabel] = host.UUID
+
 		nodeInt, ok := c.Get(host.Hostname)
 		if !ok {
 			temp_node, err := getKubeNode(kClient, host.Hostname)

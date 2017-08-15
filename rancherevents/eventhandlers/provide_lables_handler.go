@@ -2,11 +2,13 @@ package eventhandlers
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	util "github.com/rancher/kubernetes-agent/rancherevents/util"
+	"strings"
 )
 
 type syncHandler struct {
@@ -44,7 +46,9 @@ func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) er
 	labels["io.rancher.stack.name"] = namespace
 
 	if isPodContainer(containerLabels) {
-		labels["io.rancher.container.network"] = "true"
+		if !isHostNetwork(event) {
+			labels["io.rancher.container.network"] = "true"
+		}
 		labels["io.rancher.service.launch.config"] = "io.rancher.service.primary.launch.config"
 		labels["io.rancher.container.display_name"] = containerLabels["io.kubernetes.pod.name"]
 		if found, err := h.copyPodLabels(namespace, name, labels); err != nil {
@@ -105,4 +109,17 @@ func (h *syncHandler) parseContainerLabels(event *events.Event) (map[string]stri
 	}
 
 	return labels, nil
+}
+
+func isHostNetwork(event *events.Event) bool {
+	data := event.Data["instanceHostMap"]
+	var instance util.InstanceHostMapData
+	mapstructure.Decode(data, &instance)
+	networkMode := instance.Instance.Data.DockerContainer.HostConfig.NetworkMode
+	if networkMode == "" {
+		logrus.Warnf("Couldn't decode %+v to instanceData.", data)
+		return false
+	}
+
+	return strings.EqualFold("host", networkMode)
 }

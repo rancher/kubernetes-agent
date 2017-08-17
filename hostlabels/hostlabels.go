@@ -1,6 +1,8 @@
 package hostlabels
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	cache "github.com/patrickmn/go-cache"
@@ -11,12 +13,22 @@ import (
 )
 
 const (
-	metadataURL        = "http://rancher-metadata/2015-12-19"
-	rancherLabelKey    = "io.rancher.labels"
-	cacheExpiryMinutes = 5 * time.Minute
+	metadataURLTemplate = "http://%v/2015-12-19"
+	rancherLabelKey     = "io.rancher.labels"
+	cacheExpiryMinutes  = 5 * time.Minute
+
+	// DefaultMetadataAddress specifies the default value to use if nothing is specified
+	DefaultMetadataAddress = "169.254.169.250"
 )
 
+// StartHostLabelSync ...
 func StartHostLabelSync(interval int, kClient *kubernetesclient.Client) error {
+	metadataAddress := os.Getenv("RANCHER_METADATA_ADDRESS")
+	if metadataAddress == "" {
+		metadataAddress = DefaultMetadataAddress
+	}
+	metadataURL := fmt.Sprintf(metadataURLTemplate, metadataAddress)
+
 	metadataClient, err := metadata.NewClientAndWait(metadataURL)
 	if err != nil {
 		log.Errorf("Error initializing metadata client: [%v]", err)

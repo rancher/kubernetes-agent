@@ -3,42 +3,37 @@ package kubernetesclient
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"strings"
 )
 
 const (
-	caLocation = "/etc/kubernetes/ssl/ca.pem"
+	caLocation    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	tokenLocation = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 var (
-	token  string
+	token  []byte
 	caData []byte
 )
 
 func Init() error {
-	bytes, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		return fmt.Errorf("Failed to read token from stdin: %v", err)
-	}
-	token = strings.TrimSpace(string(bytes))
-	if token == "" {
-		return errors.New("No token passed in from stdin")
-	}
-
+	var err error
 	caData, err = ioutil.ReadFile(caLocation)
 	if err != nil {
 		return fmt.Errorf("Failed to read CA cert %s: %v", caLocation, err)
+	}
+
+	token, err = ioutil.ReadFile(tokenLocation)
+	if err != nil {
+		return fmt.Errorf("Failed to read token %s: %v", tokenLocation, err)
 	}
 
 	return nil
 }
 
 func GetAuthorizationHeader() string {
-	return fmt.Sprintf("Bearer %s", token)
+	return fmt.Sprintf("Bearer %s", string(token))
 }
 
 func GetTLSClientConfig() *tls.Config {

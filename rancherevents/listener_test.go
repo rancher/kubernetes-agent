@@ -7,10 +7,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"gopkg.in/check.v1"
+	k8sErr "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/api/v1"
 
 	revents "github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
-	"github.com/rancher/kubernetes-model/model"
 
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/dockerclient"
@@ -81,7 +83,7 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 								"io.kubernetes.pod.namespace":  "default",
 								"io.kubernetes.pod.name":       "pod-test-1",
 								"io.kubernetes.container.name": "POD",
-								"io.kubernetes.pod.uid":        pod.Metadata.Uid,
+								"io.kubernetes.pod.uid":        string(pod.ObjectMeta.UID),
 							},
 						},
 					},
@@ -106,7 +108,7 @@ func (s *ListenerTestSuite) TestSyncHandler(c *check.C) {
 	c.Assert(newLabels, check.DeepEquals,
 		map[string]string{
 			"env": "dev",
-			"io.rancher.service.deployment.unit": pod.Metadata.Uid,
+			"io.rancher.service.deployment.unit": string(pod.ObjectMeta.UID),
 			"io.rancher.stack.name":              "default",
 			"io.rancher.container.display_name":  "pod-test-1",
 			"io.rancher.container.network":       "true",
@@ -122,30 +124,31 @@ func get(theMap interface{}, key string) interface{} {
 	}
 }
 
-func (s *ListenerTestSuite) createPod(c *check.C) (*model.Pod, []docker.APIContainers, error) {
+func (s *ListenerTestSuite) createPod(c *check.C) (*v1.Pod, []docker.APIContainers, error) {
 	podName := "pod-test-1"
 	cleanup(s.kClient, "pod", "default", podName, c)
 
-	podLabels := map[string]interface{}{"env": "dev"}
-	podMeta := &model.ObjectMeta{
+	podLabels := map[string]string{"env": "dev"}
+
+	podMeta := metav1.ObjectMeta{
 		Labels: podLabels,
 		Name:   podName,
 	}
-	container := model.Container{
+	container := v1.Container{
 		Name:            "pod-test",
 		Image:           "nginx",
 		ImagePullPolicy: "IfNotPresent",
 	}
-	containers := []model.Container{container}
-	podSpec := &model.PodSpec{
+	containers := []v1.Container{container}
+	podSpec := v1.PodSpec{
 		Containers:    containers,
 		RestartPolicy: "Always",
-		DnsPolicy:     "ClusterFirst",
+		DNSPolicy:     "ClusterFirst",
 	}
 
-	pod := &model.Pod{
-		Metadata: podMeta,
-		Spec:     podSpec,
+	pod := &v1.Pod{
+		ObjectMeta: podMeta,
+		Spec:       podSpec,
 	}
 
 	pod, err := s.kClient.Pod.CreatePod("default", pod)
@@ -186,12 +189,12 @@ func cleanup(client *kubernetesclient.Client, resourceType string, namespace str
 	var err error
 	switch resourceType {
 	case "pod":
-		_, err = client.Pod.DeletePod(namespace, name)
+		err = client.Pod.DeletePod(namespace, name)
 	default:
 		c.Fatalf("Unknown type for cleanup: %s", resourceType)
 	}
 	if err != nil {
-		if apiError, ok := err.(*kubernetesclient.ApiError); ok && apiError.StatusCode == 404 {
+		if k8sErr.IsNotFound(err) {
 			return nil
 		} else {
 			return err

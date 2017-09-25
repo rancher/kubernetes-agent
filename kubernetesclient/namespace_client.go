@@ -1,19 +1,14 @@
 package kubernetesclient
 
 import (
-	"fmt"
-
-	"github.com/rancher/kubernetes-model/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/api/v1"
 )
 
-const NamespacePath string = "/api/v1/namespaces/"
-const NamespaceByNamePath string = "/api/v1/namespaces/%s"
-
 type NamespaceOperations interface {
-	ByName(name string) (*model.Namespace, error)
-	CreateNamespace(resource *model.Namespace) (*model.Namespace, error)
-	ReplaceNamespace(namespace string, resource *model.Namespace) (*model.Namespace, error)
-	DeleteNamespace(namespace string) (*model.Status, error)
+	ByName(name string) (*v1.Namespace, error)
+	CreateNamespace(resource *v1.Namespace) (*v1.Namespace, error)
+	DeleteNamespace(namespace string) error
 }
 
 func newNamespaceClient(client *Client) *NamespaceClient {
@@ -26,29 +21,17 @@ type NamespaceClient struct {
 	client *Client
 }
 
-func (c *NamespaceClient) ByName(name string) (*model.Namespace, error) {
-	resp := &model.Namespace{}
-	path := fmt.Sprintf(NamespaceByNamePath, name)
-	err := c.client.doGet(path, resp)
+func (c *NamespaceClient) ByName(name string) (*v1.Namespace, error) {
+	resp, err := c.client.K8sClientSet.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
 	return resp, err
 }
 
-func (c *NamespaceClient) CreateNamespace(resource *model.Namespace) (*model.Namespace, error) {
-	resp := &model.Namespace{}
-	err := c.client.doPost(NamespacePath, resource, resp)
+func (c *NamespaceClient) CreateNamespace(resource *v1.Namespace) (*v1.Namespace, error) {
+	resp, err := c.client.K8sClientSet.CoreV1().Namespaces().Create(resource)
 	return resp, err
 }
 
-func (c *NamespaceClient) ReplaceNamespace(name string, resource *model.Namespace) (*model.Namespace, error) {
-	resp := &model.Namespace{}
-	path := fmt.Sprintf(NamespaceByNamePath, name)
-	err := c.client.doPut(path, resource, resp)
-	return resp, err
-}
-
-func (c *NamespaceClient) DeleteNamespace(name string) (*model.Status, error) {
-	status := &model.Status{}
-	path := fmt.Sprintf(NamespaceByNamePath, name)
-	err := c.client.doDelete(path, status)
-	return status, err
+func (c *NamespaceClient) DeleteNamespace(name string) error {
+	err := c.client.K8sClientSet.CoreV1().Namespaces().Delete(name, &metav1.DeleteOptions{})
+	return err
 }

@@ -1,19 +1,14 @@
 package kubernetesclient
 
 import (
-	"fmt"
-
-	"github.com/rancher/kubernetes-model/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/api/v1"
 )
 
-const PodPath string = "/api/v1/namespaces/%s/pods"
-const PodByNamePath string = "/api/v1/namespaces/%s/pods/%s"
-
 type PodOperations interface {
-	ByName(namespace string, name string) (*model.Pod, error)
-	CreatePod(namespace string, resource *model.Pod) (*model.Pod, error)
-	ReplacePod(namespace string, resource *model.Pod) (*model.Pod, error)
-	DeletePod(namespace string, name string) (*model.Status, error)
+	ByName(namespace string, name string) (*v1.Pod, error)
+	CreatePod(namespace string, resource *v1.Pod) (*v1.Pod, error)
+	DeletePod(namespace string, name string) error
 }
 
 func newPodClient(client *Client) *PodClient {
@@ -26,30 +21,17 @@ type PodClient struct {
 	client *Client
 }
 
-func (c *PodClient) ByName(namespace string, name string) (*model.Pod, error) {
-	resp := &model.Pod{}
-	path := fmt.Sprintf(PodByNamePath, namespace, name)
-	err := c.client.doGet(path, resp)
+func (c *PodClient) ByName(namespace string, name string) (*v1.Pod, error) {
+	resp, err := c.client.K8sClientSet.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 	return resp, err
 }
 
-func (c *PodClient) CreatePod(namespace string, resource *model.Pod) (*model.Pod, error) {
-	resp := &model.Pod{}
-	path := fmt.Sprintf(PodPath, namespace)
-	err := c.client.doPost(path, resource, resp)
+func (c *PodClient) CreatePod(namespace string, resource *v1.Pod) (*v1.Pod, error) {
+	resp, err := c.client.K8sClientSet.CoreV1().Pods(namespace).Create(resource)
 	return resp, err
 }
 
-func (c *PodClient) ReplacePod(namespace string, resource *model.Pod) (*model.Pod, error) {
-	resp := &model.Pod{}
-	path := fmt.Sprintf(PodByNamePath, namespace, resource.Metadata.Name)
-	err := c.client.doPut(path, resource, resp)
-	return resp, err
-}
-
-func (c *PodClient) DeletePod(namespace string, name string) (*model.Status, error) {
-	status := &model.Status{}
-	path := fmt.Sprintf(PodByNamePath, namespace, name)
-	err := c.client.doDelete(path, status)
-	return status, err
+func (c *PodClient) DeletePod(namespace string, name string) error {
+	err := c.client.K8sClientSet.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{})
+	return err
 }

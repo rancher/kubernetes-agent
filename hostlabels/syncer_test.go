@@ -14,7 +14,8 @@ import (
 	cache "github.com/patrickmn/go-cache"
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
-	"github.com/rancher/kubernetes-model/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/api/v1"
 )
 
 var (
@@ -38,7 +39,7 @@ func (f *fakeMetadataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 type fakeKubeNodeHandler struct {
-	nodes map[string]*model.Node
+	nodes map[string]*v1.Node
 }
 
 type tcpKeepAliveListener struct {
@@ -66,10 +67,11 @@ func (f *fakeKubeNodeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 	// Replace Node
 	if r.Method == http.MethodPut {
-		node := &model.Node{}
+		node := &v1.Node{}
 		data, _ := ioutil.ReadAll(r.Body)
 		json.Unmarshal(data, node)
-		f.nodes[node.Metadata.Name] = node
+		f.nodes[node.Name] = node
+		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
 	}
 }
@@ -80,7 +82,7 @@ func TestMain(m *testing.M) {
 	}
 
 	kubeHandler = &fakeKubeNodeHandler{
-		nodes: map[string]*model.Node{},
+		nodes: map[string]*v1.Node{},
 	}
 
 	metadataMux := http.NewServeMux()
@@ -136,12 +138,12 @@ func TestDetectsRemoval(t *testing.T) {
 		},
 	}
 
-	kubeHandler.nodes["test1"] = &model.Node{
-		Metadata: &model.ObjectMeta{
-			Labels: map[string]interface{}{
+	kubeHandler.nodes["test1"] = &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
 				"test1": "val1",
 			},
-			Annotations: map[string]interface{}{
+			Annotations: map[string]string{
 				"io.rancher.labels.test1": "",
 			},
 			Name: "test1",
@@ -150,7 +152,7 @@ func TestDetectsRemoval(t *testing.T) {
 
 	sync(kubeClient, metadataClient, c)
 
-	if _, ok := kubeHandler.nodes["test1"].Metadata.Labels["test1"]; ok {
+	if _, ok := kubeHandler.nodes["test1"].Labels["test1"]; ok {
 		t.Error("Label test1 was not detected as removed")
 	}
 }
@@ -170,12 +172,12 @@ func TestDetectsAddition(t *testing.T) {
 		},
 	}
 
-	kubeHandler.nodes["test2"] = &model.Node{
-		Metadata: &model.ObjectMeta{
-			Labels: map[string]interface{}{
+	kubeHandler.nodes["test2"] = &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
 				"io.kubernetes.meta": "kube.val",
 			},
-			Annotations: map[string]interface{}{
+			Annotations: map[string]string{
 				"io.kube.test": "val",
 			},
 			Name: "test2",
@@ -184,11 +186,11 @@ func TestDetectsAddition(t *testing.T) {
 
 	sync(kubeClient, metadataClient, c)
 
-	if _, ok := kubeHandler.nodes["test2"].Metadata.Labels["test2"]; !ok {
+	if _, ok := kubeHandler.nodes["test2"].Labels["test2"]; !ok {
 		t.Error("Label test2 was not detected as added")
 	}
 
-	if _, ok := kubeHandler.nodes["test2"].Metadata.Annotations["io.rancher.labels.test2"]; !ok {
+	if _, ok := kubeHandler.nodes["test2"].Annotations["io.rancher.labels.test2"]; !ok {
 		t.Error("Annotation was not set on addition of new label")
 	}
 }
@@ -208,12 +210,12 @@ func TestDetectsChange(t *testing.T) {
 		},
 	}
 
-	kubeHandler.nodes["test3"] = &model.Node{
-		Metadata: &model.ObjectMeta{
-			Labels: map[string]interface{}{
+	kubeHandler.nodes["test3"] = &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
 				"test3": "valx",
 			},
-			Annotations: map[string]interface{}{
+			Annotations: map[string]string{
 				"io.rancher.labels.test3": "",
 			},
 			Name: "test3",
@@ -222,11 +224,11 @@ func TestDetectsChange(t *testing.T) {
 
 	sync(kubeClient, metadataClient, c)
 
-	if val := kubeHandler.nodes["test3"].Metadata.Labels["test3"]; val != "val3" {
+	if val := kubeHandler.nodes["test3"].Labels["test3"]; val != "val3" {
 		t.Error("Label test3 was not detected as changed")
 	}
 
-	if _, ok := kubeHandler.nodes["test3"].Metadata.Annotations["io.rancher.labels.test3"]; !ok {
+	if _, ok := kubeHandler.nodes["test3"].Annotations["io.rancher.labels.test3"]; !ok {
 		t.Error("Annotation was not set on addition of new label")
 	}
 }

@@ -9,8 +9,8 @@ import (
 
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
-	"github.com/rancher/kubernetes-model/model"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/pkg/api/v1"
 )
 
 type hostLabelSyncer struct {
@@ -27,7 +27,7 @@ func (h *hostLabelSyncer) syncHostLabels(version string) {
 	}
 }
 
-func getKubeNode(kClient *kubernetesclient.Client, hostname string) (*model.Node, error) {
+func getKubeNode(kClient *kubernetesclient.Client, hostname string) (*v1.Node, error) {
 	node, err := kClient.Node.ByName(hostname)
 	if err != nil {
 		log.Errorf("Error getting node: [%s] by name from kubernetes, err: [%v]", hostname, err)
@@ -45,20 +45,20 @@ func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *c
 	for _, host := range hosts {
 		nodeInt, ok := c.Get(host.Hostname)
 		if !ok {
-			temp_node, err := getKubeNode(kClient, host.Hostname)
+			tempNode, err := getKubeNode(kClient, host.Hostname)
 			if err != nil {
 				log.Errorf("Error getting node: [%s] by name from kubernetes, err: [%v]", host.Hostname, err)
 				// This node might not have been added to kuberentes cluster yet, so skip it
 				continue
 			}
-			c.Set(host.Hostname, temp_node, 0)
-			nodeInt = temp_node
+			c.Set(host.Hostname, tempNode, 0)
+			nodeInt = tempNode
 		}
-		node := nodeInt.(*model.Node)
-		if node.Metadata.Annotations == nil {
-			node.Metadata.Annotations = make(map[string]interface{})
+		node := nodeInt.(*v1.Node)
+		if node.Annotations == nil {
+			node.Annotations = make(map[string]string)
 		}
-		rancherLabelsMetadataStore := node.Metadata.Annotations
+		rancherLabelsMetadataStore := node.Annotations
 		changed := false
 		//check for new/updated labels
 		for k, v1 := range host.Labels {
@@ -68,12 +68,12 @@ func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *c
 			if changed {
 				break
 			}
-			v2, ok := node.Metadata.Labels[k]
+			v2, ok := node.Labels[k]
 			if !ok {
 				// This label doesn't exist
 				changed = true
 			} else {
-				v2String, ok := v2.(string)
+				v2String := v2
 				if !ok {
 					changed = true
 				} else if v1 != v2String {
@@ -81,7 +81,7 @@ func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *c
 				}
 			}
 		}
-		for k := range node.Metadata.Labels {
+		for k := range node.Labels {
 			if changed {
 				break
 			}
@@ -102,30 +102,29 @@ func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *c
 				continue
 			}
 			c.Set(host.Hostname, node, 0)
-			if node.Metadata.Annotations == nil {
-				node.Metadata.Annotations = make(map[string]interface{})
+			if node.Annotations == nil {
+				node.Annotations = make(map[string]string)
 			}
-			rancherLabelsMetadataStore := node.Metadata.Annotations
+			rancherLabelsMetadataStore := node.Annotations
 			for k, v1 := range host.Labels {
 				if !isValidLabelValue(v1) {
 					log.Infof("skipping invalid label %s=%s", k, v1)
 					continue
 				}
-				node.Metadata.Labels[k] = v1
+				node.Labels[k] = v1
 				rancherLabelsMetadataStore[toKMetaLabel(k)] = ""
 
 			}
-			for k := range node.Metadata.Labels {
+			for k := range node.Labels {
 				if _, ok := rancherLabelsMetadataStore[toKMetaLabel(k)]; !ok {
 					// This is not a rancher managed label
 					continue
 				}
 				if _, ok := host.Labels[k]; !ok {
-					delete(node.Metadata.Labels, k)
+					delete(node.Labels, k)
 					delete(rancherLabelsMetadataStore, toKMetaLabel(k))
 				}
 			}
-
 			_, err = kClient.Node.ReplaceNode(node)
 			if err != nil {
 				log.Errorf("Error updating node [%s] with new host labels, err :[%v]", host.Hostname, err)

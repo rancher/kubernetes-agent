@@ -9,7 +9,7 @@ import (
 
 func ConnectToEventStream(conf config.Config) error {
 
-	kClient := kubernetesclient.NewClient(conf.KubernetesURL, false)
+	kClient := kubernetesclient.NewClient(conf.KubernetesURL)
 
 	eventHandlers := map[string]revents.EventHandler{
 		"compute.instance.providelabels": eventhandlers.NewProvideLablesHandler(kClient).Handler,

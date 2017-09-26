@@ -10,8 +10,8 @@ import (
 	"github.com/rancher/kubernetes-agent/healthcheck"
 	"github.com/rancher/kubernetes-agent/hostlabels"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
-	"github.com/rancher/kubernetes-agent/kubernetesevents"
 	"github.com/rancher/kubernetes-agent/rancherevents"
+	"github.com/rancher/kubernetes-agent/watchevents"
 )
 
 func main() {
@@ -54,13 +54,6 @@ func main() {
 			Usage:  "Port to configure an HTTP health check listener on",
 			EnvVar: "HEALTH_CHECK_PORT",
 		},
-		cli.StringSliceFlag{
-			Name: "watch-kind",
-			Value: &cli.StringSlice{"namespaces", "services", "replicationcontrollers", "pods",
-				"deployments", "ingresses", "jobs", "horizontalpodautoscalers", "persistentvolumes",
-				"persistentvolumeclaims", "replicasets", "secrets"},
-			Usage: "Which k8s kinds to watch and report changes to Rancher",
-		},
 		cli.IntFlag{
 			Name:  "host-labels-update-interval",
 			Value: 5,
@@ -81,33 +74,17 @@ func launch(c *cli.Context) {
 		log.Fatal(err)
 	}
 
-	if err = kubernetesclient.Init(); err != nil {
-		log.Fatal(err)
-	}
+	kClient := kubernetesclient.NewClient(conf.KubernetesURL)
 
-	kClient := kubernetesclient.NewClient(conf.KubernetesURL, true)
+	svcHandler := watchevents.NewServiceHandler(rClient, kClient)
 
-	svcHandler := kubernetesevents.NewServiceHandler(rClient, kClient, conf)
+	nsHandler := watchevents.NewNamespaceHandler(rClient, kClient)
 
-	nsHandler := kubernetesevents.NewHandler(rClient, kClient, kubernetesevents.NamespaceKind)
-	handlers := []kubernetesevents.Handler{nsHandler}
+	svcHandler.Start()
+	defer svcHandler.Stop()
 
-	log.Info("Watching changes for kinds: ", c.StringSlice("watch-kind"))
-	for _, kind := range c.StringSlice("watch-kind") {
-		handlers = append(handlers, kubernetesevents.NewChangeHandler(rClient, kClient, kind))
-	}
-
-	go func(rc chan error) {
-		err := kubernetesevents.SyncAndWatchEventStream([]kubernetesevents.SyncHandler{svcHandler})
-		log.Errorf("kubernetes Sync and stream listener exited with error: %s", err)
-		rc <- err
-	}(resultChan)
-
-	go func(rc chan error) {
-		err := kubernetesevents.ConnectToEventStream(handlers, conf)
-		log.Errorf("Kubernetes stream listener exited with error: %s", err)
-		rc <- err
-	}(resultChan)
+	nsHandler.Start()
+	defer nsHandler.Stop()
 
 	go func(rc chan error) {
 		err := rancherevents.ConnectToEventStream(conf)

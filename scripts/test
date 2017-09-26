@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 set -e
 
 cleanup()
@@ -69,6 +69,28 @@ until $(curl --output /dev/null --silent --fail http://localhost:8080/api/v1/ser
     printf '.'
     sleep 5
 done
+
+mkdir -p /etc/kubernetes/ssl/
+cat > /etc/kubernetes/ssl/kubeconfig << EOF
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    api-version: v1
+    insecure-skip-tls-verify: true
+    server: "http://localhost:8080"
+  name: "Default"
+contexts:
+- context:
+    cluster: "Default"
+    user: "Default"
+  name: "Default"
+current-context: "Default"
+users:
+- name: "Default"
+  user:
+    token: "test"
+EOF
 
 for pkg in $(go list ./...); do
     if [[ $pkg != *"vendor"* ]]; then

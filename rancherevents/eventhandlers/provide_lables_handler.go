@@ -45,6 +45,7 @@ func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) er
 	}
 
 	labels["io.rancher.service.deployment.unit"] = containerLabels["io.kubernetes.pod.uid"]
+	labels["io.rancher.container.dns"] = "false"
 	labels["io.rancher.stack.name"] = namespace
 
 	if isPodContainer(containerLabels) {

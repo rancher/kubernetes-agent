@@ -11,84 +11,58 @@ import (
 	"strings"
 	"time"
 
+	"regexp"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/pkg/errors"
+	"github.com/rancher/go-rancher/v3"
 )
 
-const MaxWait = time.Duration(time.Second * 10)
+var slashRegex = regexp.MustCompile("[/]{2,}")
 
 // EventHandler Defines the function "interface" that handlers must conform to.
 type EventHandler func(*Event, *client.RancherClient) error
 
 type EventRouter struct {
-	name          string
-	priority      int
-	apiURL        string
-	accessKey     string
-	secretKey     string
 	apiClient     *client.RancherClient
 	subscribeURL  string
 	eventHandlers map[string]EventHandler
 	workerCount   int
 	eventStream   *websocket.Conn
-	resourceName  string
-	pingConfig    PingConfig
+	PingConfig    PingConfig
 }
 
-func NewEventRouter(name string, priority int, apiURL string, accessKey string, secretKey string,
-	apiClient *client.RancherClient, eventHandlers map[string]EventHandler, resourceName string, workerCount int,
-	pingConfig PingConfig) (*EventRouter, error) {
+func NewEventRouter(apiClient *client.RancherClient, workerCount int, eventHandlers map[string]EventHandler) (*EventRouter, error) {
+	subscribeURL := ""
 
-	if apiClient == nil {
-		var err error
-		apiClient, err = client.NewRancherClient(&client.ClientOpts{
-			Timeout:   time.Second * 30,
-			Url:       apiURL,
-			AccessKey: accessKey,
-			SecretKey: secretKey,
-		})
-		if err != nil {
-			return nil, err
+	if apiClient.RancherBaseClient != nil {
+		schema, ok := apiClient.GetTypes()["subscribe"]
+		if !ok {
+			return nil, errors.New("Client is not able to subscribe to events")
+		}
+
+		subscribeURL = schema.Links["collection"]
+		if strings.HasPrefix(subscribeURL, "http") {
+			subscribeURL = strings.Replace(subscribeURL, "http", "ws", 1)
 		}
 	}
 
-	// TODO Get subscribe collection URL from API instead of hard coding
-	subscribeURL := strings.Replace(apiURL+"/subscribe", "http", "ws", 1)
-
 	return &EventRouter{
-		name:          name,
-		priority:      priority,
-		apiURL:        apiURL,
-		accessKey:     accessKey,
-		secretKey:     secretKey,
 		apiClient:     apiClient,
 		subscribeURL:  subscribeURL,
 		eventHandlers: eventHandlers,
 		workerCount:   workerCount,
-		resourceName:  resourceName,
-		pingConfig:    pingConfig,
+		PingConfig:    DefaultPingConfig,
 	}, nil
 }
 
-// The difference between Start and StartWithoutCreate is a matter of making this event router
-// more generally usable. The Start implementation creates
-// the necessary ExternalHandler upon start up. This router has been refactor to
-// be used in situations where creating an externalHandler is not desired.
-// This allows the router to be used for Agent connections and for ExternalHandlers
-// that are created outside of this router.
-
-func (router *EventRouter) Start(ready chan<- bool) error {
-	err := router.createExternalHandler()
-	if err != nil {
-		return err
-	}
-	eventSuffix := ";handler=" + router.name
+func (router *EventRouter) StartHandler(name string, ready chan<- bool) error {
 	wp := SkippingWorkerPool(router.workerCount, resourceIDLocker)
-	return router.run(wp, ready, eventSuffix)
+	return router.run(wp, ready, ";handler="+name)
 }
 
-func (router *EventRouter) StartWithoutCreate(ready chan<- bool) error {
+func (router *EventRouter) Start(ready chan<- bool) error {
 	wp := SkippingWorkerPool(router.workerCount, resourceIDLocker)
 	return router.run(wp, ready, "")
 }
@@ -109,6 +83,8 @@ func (router *EventRouter) run(wp WorkerPool, ready chan<- bool, eventSuffix str
 		// Ping doesnt need registered in the POST and ping events don't have the handler suffix.
 		//If we start handling other non-suffix events, we might consider improving this.
 		handlers["ping"] = pingHandler
+	} else {
+		handlers["ping"] = DropEvent
 	}
 
 	subscribeParams := url.Values{}
@@ -118,7 +94,14 @@ func (router *EventRouter) run(wp WorkerPool, ready chan<- bool, eventSuffix str
 		handlers[fullEventKey] = handler
 	}
 
-	eventStream, err := router.subscribeToEvents(router.subscribeURL, router.accessKey, router.secretKey, subscribeParams)
+	accessKey := ""
+	secretKey := ""
+	if router.apiClient.RancherBaseClient != nil {
+		accessKey = router.apiClient.GetOpts().AccessKey
+		secretKey = router.apiClient.GetOpts().SecretKey
+	}
+
+	eventStream, err := router.subscribeToEvents(router.subscribeURL, accessKey, secretKey, subscribeParams)
 	if err != nil {
 		return err
 	}
@@ -165,7 +148,19 @@ func (router *EventRouter) Stop() {
 }
 
 func (router *EventRouter) subscribeToEvents(subscribeURL string, accessKey string, secretKey string, data url.Values) (*websocket.Conn, error) {
-	dialer := &websocket.Dialer{}
+	// gorilla websocket will blow up if the path starts with //
+	parsed, err := url.Parse(subscribeURL)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(parsed.Path, "//") {
+		parsed.Path = slashRegex.ReplaceAllString(parsed.Path, "/")
+		subscribeURL = parsed.String()
+	}
+
+	dialer := &websocket.Dialer{
+		HandshakeTimeout: time.Second * 30,
+	}
 	headers := http.Header{}
 	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(accessKey+":"+secretKey)))
 	subscribeURL = subscribeURL + "?" + data.Encode()

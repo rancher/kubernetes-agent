@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/pkg/api/v1"
@@ -93,22 +93,18 @@ func (s *serviceHandler) add(realSVC v1.Service, eventType string) error {
 	selector := buffer.String()
 	selector = strings.TrimSuffix(selector, ",")
 
-	fields := map[string]interface{}{"template": realSVC}
-	data := map[string]interface{}{"fields": fields}
-
 	rancherUUID, _ := metadata.Labels["io.rancher.uuid"]
 	var vip string
 	if !strings.EqualFold(clusterIP, "None") {
 		vip = clusterIP
 	}
 	service := client.Service{
-		Kind:              kind,
-		Name:              metadata.Name,
-		ExternalId:        string(metadata.UID),
-		SelectorContainer: selector,
-		Data:              data,
-		Uuid:              rancherUUID,
-		Vip:               vip,
+		Kind:       kind,
+		Name:       metadata.Name,
+		ExternalId: string(metadata.UID),
+		Selector:   selector,
+		Uuid:       rancherUUID,
+		Vip:        vip,
 	}
 	serviceEvent.Service = service
 

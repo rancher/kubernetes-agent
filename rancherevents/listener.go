@@ -2,12 +2,13 @@ package rancherevents
 
 import (
 	revents "github.com/rancher/event-subscriber/events"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-agent/rancherevents/eventhandlers"
 )
 
-func ConnectToEventStream(conf config.Config) error {
+func ConnectToEventStream(rClient *client.RancherClient, conf config.Config) error {
 
 	kClient := kubernetesclient.NewClient(conf.KubernetesURL)
 
@@ -17,10 +18,10 @@ func ConnectToEventStream(conf config.Config) error {
 		"ping":                           eventhandlers.NewPingHandler().Handler,
 	}
 
-	router, err := revents.NewEventRouter("", 0, conf.CattleURL, conf.CattleAccessKey, conf.CattleSecretKey, nil, eventHandlers, "", conf.WorkerCount, revents.DefaultPingConfig)
+	router, err := revents.NewEventRouter(rClient, conf.WorkerCount, eventHandlers)
 	if err != nil {
 		return err
 	}
-	err = router.StartWithoutCreate(nil)
+	err = router.Start(nil)
 	return err
 }

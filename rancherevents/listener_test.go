@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 
 	revents "github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/dockerclient"

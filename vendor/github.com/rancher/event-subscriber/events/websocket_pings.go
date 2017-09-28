@@ -22,7 +22,7 @@ var DefaultPingConfig = PingConfig{
 
 func (router *EventRouter) sendWebsocketPings() {
 	log.Infof("Starting websocket pings")
-	ticker := time.NewTicker(time.Millisecond * time.Duration(router.pingConfig.SendPingInterval))
+	ticker := time.NewTicker(time.Millisecond * time.Duration(router.PingConfig.SendPingInterval))
 	defer ticker.Stop()
 	for range ticker.C {
 		if err := router.eventStream.WriteControl(websocket.PingMessage, []byte(""), time.Now().Add(time.Second)); err != nil {
@@ -41,7 +41,7 @@ func newPongHandler(r *EventRouter) *pongHandler {
 		done:     make(chan bool),
 	}
 
-	go ph.startTimer(r.pingConfig.CheckPongInterval, r.pingConfig.MaxPongWait)
+	go ph.startTimer(r.PingConfig.CheckPongInterval, r.PingConfig.MaxPongWait)
 
 	return ph
 }

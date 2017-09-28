@@ -2,7 +2,7 @@ package eventhandlers
 
 import (
 	revents "github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 func NewReply(event *revents.Event) *client.Publish {

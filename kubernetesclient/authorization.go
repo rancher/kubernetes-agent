@@ -1,19 +1,29 @@
 package kubernetesclient
 
 import (
+	"os"
+
 	"github.com/Sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	caLocation         = "/etc/kubernetes/ssl/ca.pem"
 	kubeconfigLocation = "/etc/kubernetes/ssl/kubeconfig"
+	inClusterConfig    = "INCLUSTER_CONFIG"
 )
 
 func GetK8sClientSet(apiURL string) *kubernetes.Clientset {
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigLocation)
+	var config *rest.Config
+	var err error
+
+	// used for backward compatibility for unit tests
+	if inClusterEnv := os.Getenv(inClusterConfig); inClusterEnv == "false" {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigLocation)
+	} else {
+		config, err = rest.InClusterConfig()
+	}
 	if apiURL != "" {
 		config.Host = apiURL
 	}

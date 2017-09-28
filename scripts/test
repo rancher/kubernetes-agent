@@ -14,6 +14,7 @@ cd $(dirname $0)/..
 export SOCK=/var/run/dind.sock
 export DOCKER_HOST=unix://${SOCK}
 export CATTLE_DOCKER_USE_BOOT2DOCKER=true
+export INCLUSTER_CONFIG=false
 
 ip link set dev eth0 mtu 1300
 

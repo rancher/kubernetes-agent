@@ -87,7 +87,7 @@ func launch(c *cli.Context) {
 	defer nsHandler.Stop()
 
 	go func(rc chan error) {
-		err := rancherevents.ConnectToEventStream(conf)
+		err := rancherevents.ConnectToEventStream(rClient, conf)
 		log.Errorf("Rancher stream listener exited with error: %s", err)
 		rc <- err
 	}(resultChan)

@@ -3,7 +3,7 @@ package watchevents
 import (
 	"time"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"gopkg.in/check.v1"
 	k8sErr "k8s.io/apimachinery/pkg/api/errors"

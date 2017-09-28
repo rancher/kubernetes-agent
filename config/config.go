@@ -1,8 +1,16 @@
 package config
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/codegangsta/cli"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
+)
+
+const (
+	kuberentesHostEnv = "KUBERNETES_SERVICE_HOST"
+	kuberentesPortEnv = "KUBERNETES_SERVICE_PORT"
 )
 
 type Config struct {
@@ -15,8 +23,9 @@ type Config struct {
 }
 
 func Conf(context *cli.Context) Config {
+	kubernetesURL := fmt.Sprintf("https://%s:%s", os.Getenv(kuberentesHostEnv), os.Getenv(kuberentesPortEnv))
 	config := Config{
-		KubernetesURL:   context.String("kubernetes-url"),
+		KubernetesURL:   kubernetesURL,
 		CattleURL:       context.String("cattle-url"),
 		CattleAccessKey: context.String("cattle-access-key"),
 		CattleSecretKey: context.String("cattle-secret-key"),

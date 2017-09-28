@@ -4,7 +4,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/locks"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 type EventLocker func(event *Event) locks.Locker
@@ -74,7 +74,6 @@ func (wp *nonSkippingWorkerPool) HandleWork(event *Event, eventHandlers map[stri
 }
 
 func doWork(event *Event, eventHandlers map[string]EventHandler, apiClient *client.RancherClient, locker locks.Locker) {
-
 	if event.Name != "ping" {
 		log.WithFields(log.Fields{
 			"event": *event,

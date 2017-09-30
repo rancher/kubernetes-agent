@@ -1,8 +1,7 @@
-package hostlabels
+package hostwatch
 
 import (
 	"fmt"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	cache "github.com/patrickmn/go-cache"
@@ -13,30 +12,7 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 )
 
-type hostLabelSyncer struct {
-	kClient            *kubernetesclient.Client
-	metadataClient     metadata.Client
-	cache              *cache.Cache
-	cacheExpiryMinutes time.Duration
-}
-
-func (h *hostLabelSyncer) syncHostLabels(version string) {
-	err := sync(h.kClient, h.metadataClient, h.cache)
-	if err != nil {
-		log.Errorf("Error syncing host labels: [%v]", err)
-	}
-}
-
-func getKubeNode(kClient *kubernetesclient.Client, hostname string) (*v1.Node, error) {
-	node, err := kClient.Node.ByName(hostname)
-	if err != nil {
-		log.Errorf("Error getting node: [%s] by name from kubernetes, err: [%v]", hostname, err)
-		// This node might not have been added to kuberentes cluster yet, so skip it
-	}
-	return node, err
-}
-
-func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *cache.Cache) error {
+func labelSync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *cache.Cache) error {
 	hosts, err := metadataClient.GetHosts()
 	if err != nil {
 		log.Errorf("Error reading host list from metadata service: [%v], retrying", err)
@@ -146,4 +122,13 @@ func isValidLabelValue(label string) bool {
 
 func toKMetaLabel(label string) string {
 	return fmt.Sprintf("%s.%s", rancherLabelKey, label)
+}
+
+func getKubeNode(kClient *kubernetesclient.Client, hostname string) (*v1.Node, error) {
+	node, err := kClient.Node.ByName(hostname)
+	if err != nil {
+		log.Errorf("Error getting node: [%s] by name from kubernetes, err: [%v]", hostname, err)
+		// This node might not have been added to kuberentes cluster yet, so skip it
+	}
+	return node, err
 }

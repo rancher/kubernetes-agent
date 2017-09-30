@@ -8,14 +8,13 @@ import (
 	"github.com/rancher/kubernetes-agent/rancherevents/eventhandlers"
 )
 
-func ConnectToEventStream(rClient *client.RancherClient, conf config.Config) error {
-
-	kClient := kubernetesclient.NewClient(conf.KubernetesURL)
+func ConnectToEventStream(rClient *client.RancherClient, kClient *kubernetesclient.Client, conf config.Config) error {
 
 	eventHandlers := map[string]revents.EventHandler{
-		"compute.instance.providelabels": eventhandlers.NewProvideLablesHandler(kClient).Handler,
-		"config.update":                  eventhandlers.NewPingHandler().Handler,
-		"ping":                           eventhandlers.NewPingHandler().Handler,
+		"config.update":   eventhandlers.NewPingHandler().Handler,
+		"ping":            eventhandlers.NewPingHandler().Handler,
+		"host.deactivate": eventhandlers.NewHostHandler(kClient).Handler,
+		"host.activate":   eventhandlers.NewHostHandler(kClient).Handler,
 	}
 
 	router, err := revents.NewEventRouter(rClient, conf.WorkerCount, eventHandlers)

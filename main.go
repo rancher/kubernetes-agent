@@ -8,7 +8,7 @@ import (
 
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/healthcheck"
-	"github.com/rancher/kubernetes-agent/hostlabels"
+	"github.com/rancher/kubernetes-agent/hostwatch"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-agent/rancherevents"
 	"github.com/rancher/kubernetes-agent/watchevents"
@@ -55,7 +55,7 @@ func main() {
 			EnvVar: "HEALTH_CHECK_PORT",
 		},
 		cli.IntFlag{
-			Name:  "host-labels-update-interval",
+			Name:  "host-update-interval",
 			Value: 5,
 			Usage: "The frequency at which host labels should be updated",
 		},
@@ -87,7 +87,7 @@ func launch(c *cli.Context) {
 	defer nsHandler.Stop()
 
 	go func(rc chan error) {
-		err := rancherevents.ConnectToEventStream(rClient, conf)
+		err := rancherevents.ConnectToEventStream(rClient, kClient, conf)
 		log.Errorf("Rancher stream listener exited with error: %s", err)
 		rc <- err
 	}(resultChan)
@@ -99,8 +99,8 @@ func launch(c *cli.Context) {
 	}(resultChan)
 
 	go func(rc chan error) {
-		err := hostlabels.StartHostLabelSync(c.Int("host-labels-update-interval"), kClient)
-		log.Errorf("Rancher hostLabel sync service exited with error: %s", err)
+		err := hostwatch.StartHostSync(c.Int("host-update-interval"), kClient)
+		log.Errorf("Rancher host sync service exited with error: %s", err)
 		rc <- err
 	}(resultChan)
 

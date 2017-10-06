@@ -1,4 +1,4 @@
-package hostlabels
+package hostwatch
 
 import (
 	"encoding/json"
@@ -150,7 +150,7 @@ func TestDetectsRemoval(t *testing.T) {
 		},
 	}
 
-	sync(kubeClient, metadataClient, c)
+	labelSync(kubeClient, metadataClient, c)
 
 	if _, ok := kubeHandler.nodes["test1"].Labels["test1"]; ok {
 		t.Error("Label test1 was not detected as removed")
@@ -184,7 +184,7 @@ func TestDetectsAddition(t *testing.T) {
 		},
 	}
 
-	sync(kubeClient, metadataClient, c)
+	labelSync(kubeClient, metadataClient, c)
 
 	if _, ok := kubeHandler.nodes["test2"].Labels["test2"]; !ok {
 		t.Error("Label test2 was not detected as added")
@@ -222,7 +222,7 @@ func TestDetectsChange(t *testing.T) {
 		},
 	}
 
-	sync(kubeClient, metadataClient, c)
+	labelSync(kubeClient, metadataClient, c)
 
 	if val := kubeHandler.nodes["test3"].Labels["test3"]; val != "val3" {
 		t.Error("Label test3 was not detected as changed")

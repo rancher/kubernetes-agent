@@ -15,6 +15,7 @@ func ConnectToEventStream(rClient *client.RancherClient, kClient *kubernetesclie
 		"ping":            eventhandlers.NewPingHandler().Handler,
 		"host.deactivate": eventhandlers.NewHostHandler(kClient).Handler,
 		"host.activate":   eventhandlers.NewHostHandler(kClient).Handler,
+		"host.evacuate":   eventhandlers.NewHostHandler(kClient).Handler,
 	}
 
 	router, err := revents.NewEventRouter(rClient, conf.WorkerCount, eventHandlers)

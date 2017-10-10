@@ -80,3 +80,42 @@ func TestInactiveActive(t *testing.T) {
 		t.Error("Node test2 was not uncordoned correctly")
 	}
 }
+
+func TestEvacuate(t *testing.T) {
+	metadataClient := metadata.NewClient(fakeMetadataURL)
+	kubeClient := kubernetesclient.NewClient(kubeURL)
+
+	metadataHandler.hosts = []metadata.Host{
+		{
+			Name:     "test3",
+			Hostname: "test3",
+			State:    EvacuatingState,
+		},
+	}
+
+	kubeHandler.nodes["test3"] = &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test3",
+			Labels: map[string]string{
+				"node": "test3",
+			},
+		},
+		Spec: v1.NodeSpec{
+			Unschedulable: false,
+		},
+		Status: v1.NodeStatus{
+			Conditions: []v1.NodeCondition{
+				v1.NodeCondition{
+					Type:   v1.NodeReady,
+					Status: v1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	statusSync(kubeClient, metadataClient)
+
+	if kubeHandler.nodes["test3"].Labels[DrainLabelName] != DrainLabelValue {
+		t.Error("Node test3 was not evacuated correctly")
+	}
+}

@@ -23,6 +23,8 @@ const (
 	ActivatingState = "activating"
 	// DeactivatingState specifies the default value of deactivating state of host in Ranceher Metadata
 	DeactivatingState = "deactivating"
+	// EvacuatingState specifies the default value of evacuating state of host in Ranceher Metadata
+	EvacuatingState = "evacuating"
 )
 
 type hostSyncer struct {

@@ -93,6 +93,8 @@ users:
     token: "test"
 EOF
 
+cp /bin/true /bin/kubectl
+
 for pkg in $(go list ./...); do
     if [[ $pkg != *"vendor"* ]]; then
         go test -v $pkg

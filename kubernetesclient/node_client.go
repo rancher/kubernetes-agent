@@ -8,6 +8,7 @@ import (
 type NodeOperations interface {
 	ByName(name string) (*v1.Node, error)
 	ReplaceNode(resource *v1.Node) (*v1.Node, error)
+	GetNodeList() (*v1.NodeList, error)
 }
 
 func newNodeClient(client *Client) *NodeClient {
@@ -26,4 +27,8 @@ func (c *NodeClient) ByName(name string) (*v1.Node, error) {
 
 func (c *NodeClient) ReplaceNode(resource *v1.Node) (*v1.Node, error) {
 	return c.client.K8sClient.CoreV1().Nodes().Update(resource)
+}
+
+func (c *NodeClient) GetNodeList() (*v1.NodeList, error) {
+	return c.client.K8sClient.CoreV1().Nodes().List(metav1.ListOptions{})
 }

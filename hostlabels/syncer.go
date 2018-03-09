@@ -20,6 +20,10 @@ type hostLabelSyncer struct {
 	cacheExpiryMinutes time.Duration
 }
 
+const (
+	HostnameLabel = "kubernetes.io/hostname"
+)
+
 func (h *hostLabelSyncer) syncHostLabels(version string) {
 	err := sync(h.kClient, h.metadataClient, h.cache)
 	if err != nil {
@@ -36,20 +40,47 @@ func getKubeNode(kClient *kubernetesclient.Client, hostname string) (*v1.Node, e
 	return node, err
 }
 
+func getHostnameLabelNodeMap(kClient *kubernetesclient.Client) (map[string]string, error) {
+	hostnameLabelNodeMap := map[string]string{}
+	nodeList, err := kClient.Node.GetNodeList()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, node := range nodeList.Items {
+		nodeLabels := node.Labels
+		rancherHostName, ok := nodeLabels[HostnameLabel]
+		if !ok {
+			log.Debugf("Error getting rancher hostname label for node: [%v]", node.Name)
+			continue
+		}
+		hostnameLabelNodeMap[rancherHostName] = node.Name
+	}
+	return hostnameLabelNodeMap, nil
+}
+
 func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *cache.Cache) error {
 	hosts, err := metadataClient.GetHosts()
 	if err != nil {
 		log.Errorf("Error reading host list from metadata service: [%v], retrying", err)
 		return err
 	}
+	hostnameLabelNodeMap, err := getHostnameLabelNodeMap(kClient)
+	if err != nil {
+		return fmt.Errorf("Error getting rancher host to node map from kubernetes, err: [%v]", err)
+	}
+
 	for _, host := range hosts {
 		nodeInt, ok := c.Get(host.Hostname)
 		if !ok {
 			tempNode, err := getKubeNode(kClient, host.Hostname)
-			if err != nil {
-				log.Errorf("Error getting node: [%s] by name from kubernetes, err: [%v]", host.Hostname, err)
-				// This node might not have been added to kuberentes cluster yet, so skip it
-				continue
+			if err != nil || tempNode == nil {
+				tempNode, err = getKubeNode(kClient, hostnameLabelNodeMap[host.Hostname])
+				if err != nil || tempNode == nil {
+					log.Warnf("Error getting node: [%s] by name from kubernetes, err: [%v]", host.Hostname, err)
+					// This node might not have been added to kuberentes cluster yet, so skip it
+					continue
+				}
 			}
 			c.Set(host.Hostname, tempNode, 0)
 			nodeInt = tempNode
@@ -94,9 +125,12 @@ func sync(kClient *kubernetesclient.Client, metadataClient metadata.Client, c *c
 		maxRetryCount := 3
 		for changed {
 			node, err := getKubeNode(kClient, host.Hostname)
-			if err != nil {
-				log.Errorf("Error getting node: [%s] by name from kubernetes: [%v]", host.Hostname, err)
-				continue
+			if err != nil || node == nil {
+				node, err = getKubeNode(kClient, hostnameLabelNodeMap[host.Hostname])
+				if err != nil || node == nil {
+					log.Errorf("Error getting node: [%s] by name from kubernetes, err: [%v]", host.Hostname, err)
+					continue
+				}
 			}
 			c.Set(host.Hostname, node, 0)
 			if node.Annotations == nil {

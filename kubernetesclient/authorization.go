@@ -1,7 +1,7 @@
 package kubernetesclient
 
 import (
-	"github.com/Sirupsen/logrus"
+	"github.com/leodotcloud/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -18,11 +18,11 @@ func GetK8sClientSet(apiURL string) *kubernetes.Clientset {
 		config.Host = apiURL
 	}
 	if err != nil {
-		logrus.Fatalf("Can't Build kubernetes config: %v", err)
+		log.Fatalf("Can't Build kubernetes config: %v", err)
 	}
 	K8sClientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		logrus.Fatalf("Can't initiate kubernetes client: %v", err)
+		log.Fatalf("Can't initiate kubernetes client: %v", err)
 	}
 	return K8sClientSet
 }

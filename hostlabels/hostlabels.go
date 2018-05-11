@@ -9,7 +9,7 @@ import (
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/leodotcloud/log"
 )
 
 const (

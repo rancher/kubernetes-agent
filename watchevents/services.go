@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/leodotcloud/log"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"k8s.io/apimachinery/pkg/fields"
@@ -39,21 +39,21 @@ func (s *serviceHandler) startServiceWatch() chan struct{} {
 		time.Second*0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: serviceAddDelete(func(service v1.Service) {
-				logrus.Infof("Received event: [%s] for Service: %s/%s, Handling event.", AddedEventType, service.Namespace, service.Name)
+				log.Infof("Received event: [%s] for Service: %s/%s, Handling event.", AddedEventType, service.Namespace, service.Name)
 				if err := s.add(service, AddedEventType); err != nil {
-					logrus.Errorf("Error Handling event: [%s] for Service %s/%s: %v", AddedEventType, service.Namespace, service.Name, err)
+					log.Errorf("Error Handling event: [%s] for Service %s/%s: %v", AddedEventType, service.Namespace, service.Name, err)
 				}
 			}),
 			DeleteFunc: serviceAddDelete(func(service v1.Service) {
-				logrus.Infof("Received event: [%s] for Service: %s/%s, Handling event.", DeletedEventType, service.Namespace, service.Name)
+				log.Infof("Received event: [%s] for Service: %s/%s, Handling event.", DeletedEventType, service.Namespace, service.Name)
 				if err := s.delete(service); err != nil {
-					logrus.Errorf("Error Handling event: [%s] for Service %s/%s: %v", DeletedEventType, service.Namespace, service.Name, err)
+					log.Errorf("Error Handling event: [%s] for Service %s/%s: %v", DeletedEventType, service.Namespace, service.Name, err)
 				}
 			}),
 			UpdateFunc: serviceModify(func(service v1.Service) {
-				logrus.Infof("Received event: [%s] for Service: %s/%s, Handling event.", ModifiedEventType, service.Namespace, service.Name)
+				log.Infof("Received event: [%s] for Service: %s/%s, Handling event.", ModifiedEventType, service.Namespace, service.Name)
 				if err := s.add(service, ModifiedEventType); err != nil {
-					logrus.Errorf("Error Handling event: [%s] for Service %s/%s: %v", ModifiedEventType, service.Namespace, service.Name, err)
+					log.Errorf("Error Handling event: [%s] for Service %s/%s: %v", ModifiedEventType, service.Namespace, service.Name, err)
 				}
 			}),
 		},
@@ -149,7 +149,7 @@ func (s *serviceHandler) delete(realSVC v1.Service) error {
 }
 
 func (s *serviceHandler) Start() {
-	logrus.Infof("Starting service watch")
+	log.Infof("Starting service watch")
 	s.serviceWatchChan = s.startServiceWatch()
 }
 

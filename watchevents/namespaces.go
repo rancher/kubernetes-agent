@@ -3,7 +3,7 @@ package watchevents
 import (
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/leodotcloud/log"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,16 +40,16 @@ func (n *namespaceHandler) startNamespaceWatch() chan struct{} {
 		time.Second*0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: namespaceAddDelete(func(namespace v1.Namespace) {
-				logrus.Infof("Skipping event: [%s] for namespace: %s", AddedEventType, namespace.Name)
+				log.Infof("Skipping event: [%s] for namespace: %s", AddedEventType, namespace.Name)
 			}),
 			DeleteFunc: namespaceAddDelete(func(namespace v1.Namespace) {
-				logrus.Infof("Received event: [%s] for Namespace: %s, Handling event.", DeletedEventType, namespace.Name)
+				log.Infof("Received event: [%s] for Namespace: %s, Handling event.", DeletedEventType, namespace.Name)
 				if err := n.delete(namespace); err != nil {
-					logrus.Errorf("Error Handling event: [%s] for namespace: %v", DeletedEventType, err)
+					log.Errorf("Error Handling event: [%s] for namespace: %v", DeletedEventType, err)
 				}
 			}),
 			UpdateFunc: namespaceModify(func(namespace v1.Namespace) {
-				logrus.Infof("Skipping event: [%s] for namespace: %s", ModifiedEventType, namespace.Name)
+				log.Infof("Skipping event: [%s] for namespace: %s", ModifiedEventType, namespace.Name)
 			}),
 		},
 	)
@@ -84,7 +84,7 @@ func (n *namespaceHandler) delete(realNS v1.Namespace) error {
 }
 
 func (n *namespaceHandler) Start() {
-	logrus.Infof("Starting namespace watch")
+	log.Infof("Starting namespace watch")
 	n.nsWatchChan = n.startNamespaceWatch()
 }
 

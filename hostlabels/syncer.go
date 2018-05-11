@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/leodotcloud/log"
 	cache "github.com/patrickmn/go-cache"
 
 	"github.com/rancher/go-rancher-metadata/metadata"

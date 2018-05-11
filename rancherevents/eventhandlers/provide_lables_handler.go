@@ -3,7 +3,7 @@ package eventhandlers
 import (
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/leodotcloud/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rancher/event-subscriber/events"
@@ -24,12 +24,7 @@ func NewProvideLablesHandler(kClient *kubernetesclient.Client) *syncHandler {
 }
 
 func (h *syncHandler) Handler(event *events.Event, cli *client.RancherClient) error {
-	log := logrus.WithFields(logrus.Fields{
-		"eventName":  event.Name,
-		"eventID":    event.ID,
-		"resourceID": event.ResourceID,
-	})
-	log.Infof("Rancher event: %#v", event)
+	log.Infof("Rancher event: %#v eventName=%v eventID=%v resourceID=%v", event, event.Name, event.ID, event.ResourceID)
 	labels := map[string]string{}
 
 	containerLabels, err := h.parseContainerLabels(event)
@@ -98,7 +93,7 @@ func (h *syncHandler) replyWithLabels(event *events.Event, cli *client.RancherCl
 			},
 		},
 	}
-	logrus.WithField("eventID", event.ID).Infof("Reply: %+v", reply)
+	log.Infof("Reply: %+v eventID=%v", reply, event.ID)
 	return util.PublishReply(reply, cli)
 }
 
@@ -117,7 +112,7 @@ func isHostNetwork(event *events.Event) bool {
 	mapstructure.Decode(data, &instance)
 	networkMode := instance.Instance.Data.DockerContainer.HostConfig.NetworkMode
 	if networkMode == "" {
-		logrus.Warnf("Couldn't decode %+v to instanceData.", data)
+		log.Warnf("Couldn't decode %+v to instanceData.", data)
 		return false
 	}
 

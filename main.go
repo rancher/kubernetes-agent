@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
-
+	"github.com/leodotcloud/log"
+	logserver "github.com/leodotcloud/log/server"
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/healthcheck"
 	"github.com/rancher/kubernetes-agent/hostlabels"
@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+	logserver.StartServerWithDefaults()
 	app := cli.NewApp()
 	app.Name = "kubernetes-agent"
 	app.Usage = "Start the Rancher kubernetes agent"

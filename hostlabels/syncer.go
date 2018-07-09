@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/leodotcloud/log"
 	cache "github.com/patrickmn/go-cache"
+	"github.com/rancher/log"
 
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"

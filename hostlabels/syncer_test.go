@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/leodotcloud/log"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/rancher/go-rancher-metadata/metadata"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
+	"github.com/rancher/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
 )

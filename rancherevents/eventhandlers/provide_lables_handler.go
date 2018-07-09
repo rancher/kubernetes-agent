@@ -3,13 +3,13 @@ package eventhandlers
 import (
 	"strings"
 
-	"github.com/leodotcloud/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	util "github.com/rancher/kubernetes-agent/rancherevents/util"
+	"github.com/rancher/log"
 	k8sErr "k8s.io/apimachinery/pkg/api/errors"
 )
 

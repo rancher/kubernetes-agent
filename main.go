@@ -4,14 +4,14 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/leodotcloud/log"
-	logserver "github.com/leodotcloud/log/server"
 	"github.com/rancher/kubernetes-agent/config"
 	"github.com/rancher/kubernetes-agent/healthcheck"
 	"github.com/rancher/kubernetes-agent/hostlabels"
 	"github.com/rancher/kubernetes-agent/kubernetesclient"
 	"github.com/rancher/kubernetes-agent/rancherevents"
 	"github.com/rancher/kubernetes-agent/watchevents"
+	"github.com/rancher/log"
+	logserver "github.com/rancher/log/server"
 )
 
 func main() {
